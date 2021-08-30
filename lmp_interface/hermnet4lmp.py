@@ -28,7 +28,7 @@ def calculator(g, model_path, trn_mean, device):
 
     energy = model(g) + trn_mean
     forces = - torch.autograd.grad(energy.sum(), g.ndata['x'])[0]
-    return energy.detach().cpu().numpy().item(), forces.detach().cpu().numpy(), None
+    return energy.detach().cpu().numpy().item(), forces.detach().cpu().view(-1).numpy(), None
 
 
 if __name__ == '__main__':
