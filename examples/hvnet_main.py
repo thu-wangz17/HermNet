@@ -7,9 +7,9 @@ from torch.utils.data import DataLoader
 from dgl.data.utils import split_dataset
 from time import time
 from tqdm import tqdm
-from hmdnet.data import MD17Dataset
-from hmdnet.hvnet import HVNet
-from hmdnet.utils import _collate
+from hermnet.data import MD17Dataset
+from hermnet.hermnet import HVNet
+from hermnet.utils import _collate
 
 if __name__ == '__main__':
     rc = 5.0
