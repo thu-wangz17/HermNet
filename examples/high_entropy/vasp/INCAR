@@ -1,0 +1,51 @@
+SYSTEM = AlCoCrCuFeNi
+# LSCALAPACK=.FALSE.
+
+Start parameters:
+   ICHARG = 2
+   ISTART = 0
+   ISYM   = 0
+   ISPIN  = 1           spin 1-no 2-yes
+   PREC   = Normal      other possibilities: Normal - Low|Medium|High
+   NELM   = 1000
+   ENCUT  = 273.2
+Electronic relaxation:
+   ALGO   = Vary Fast        algorithm Normal-Blocked Davidson Very_Fast-RMM-DIIS Fast-Mixture
+   EDIFF  = 1E-07
+   # EDIFFG = -1E-03
+   # NEDOS  = 2001
+   # EMAX   = 7
+   # EMIN   = 5
+   MAXMIX = 40
+   NPAR=4
+   NELMIN = 8
+Electronic relaxation 2 (details)
+    LDIAG  = .True.    sub-space diagonalisation
+    LREAL  = A
+    # KSP1873NG =0.3
+    # IVDW  = 11
+Ionic relaxation:
+   NSW    = 300000         number of ionic relaxation steps
+   IBRION = 0           update method -1-no 0-MD 1-quasi Newton 2-CG  5 SD 3-damped MD 5-Hessian
+   ISIF   = 0           relax 0-no stress 2-only atoms 3-everything
+   ISMEAR = 0
+   SIGMA  = 0.05         width
+   # NWRITE = 0
+   TEBEG  = 1873
+   TEEND  = 1873
+   SMASS  = 0
+   NBLOCK = 1
+   POTIM  = 1
+Spin-orbital interaction:
+  #LSORBIT   = .FALSE.
+  #SAXIS     = 0 0 1
+   MAGMOM    = 1000*0
+  #GGA_COMPAT  =  .FALSE.
+   LMAXMIX   = 2
+Analysis:
+   LCHARG = .False.      write CHGCAR and CHG files
+   LWAVE  = .False.     write WAVECAR file
+   LVTOT  = .False.       write LOCPOT file
+   LELF   = .False.       write LELF file
+   LAECHG = .False.      write AE charge density and promolecule
+   IWAVPR = 11

@@ -1,0 +1,23 @@
+# Al1.3CoCrCuFeNi
+units          metal
+boundary       p p p
+atom_style     atomic
+
+lattice        bcc 3.624
+region         box block 0 5 0 5 0 4 units lattice
+create_box     6 box
+create_atoms   1 box
+set            type 1 type/ratio 2 0.15873015873015872 1226
+set            type 1 type/ratio 3 0.18867924528301888 2414
+set            type 1 type/ratio 4 0.23255813953488372 5234
+set            type 1 type/ratio 5 0.30303030303030304 4235
+set            type 1 type/ratio 6 0.43478260869565220 4935
+
+mass           1 26.98  # Al
+mass           2 58.93  # Co
+mass           3 52.00  # Cr
+mass           4 63.55  # Cu
+mass           5 55.85  # Fe
+mass           6 58.69  # Ni
+
+write_data    AlCoCrCuFeNi.data
