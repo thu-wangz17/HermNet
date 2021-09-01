@@ -4,7 +4,7 @@ import numpy as np
 from numpy import ndarray
 import dgl
 
-def neighbors(cell: ndarray, coord0: ndarray, coord1:ndarray, rc: float):
+def neighbors(cell: ndarray, coord0: ndarray, coord1: ndarray, rc: float):
     """Calculate the nearest neighbors for constructing graph
 
     Parameters

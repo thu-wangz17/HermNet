@@ -57,10 +57,8 @@ class HeteroTriadicGraphConv(nn.Module):
     ----------
     mods : dict[str, nn.Module]
         Modules associated with every edge types.
-    aggr : str
-        'sum' or 'mean'
     """
-    def __init__(self, etypes, mods, aggr='sum'):
+    def __init__(self, etypes, mods):
         super(HeteroTriadicGraphConv, self).__init__()
         self.etypes = etypes
         self.ntypes = []
@@ -76,8 +74,6 @@ class HeteroTriadicGraphConv(nn.Module):
             set_allow_zero_in_degree_fn = getattr(v, 'set_allow_zero_in_degree', None)
             if callable(set_allow_zero_in_degree_fn):
                 set_allow_zero_in_degree_fn(True)
-
-        self.aggr = aggr
 
     def forward(self, g, ns, nv):
         """Forward computation
@@ -113,12 +109,7 @@ class HeteroTriadicGraphConv(nn.Module):
             srsts.append(dst_s)
             vrsts.append(dst_v)
 
-        if self.aggr == 'sum':
-            return torch.stack(srsts).sum(dim=0), torch.stack(vrsts).sum(dim=0)
-        elif self.aggr == 'mean':
-            return torch.stack(srsts).mean(dim=0), torch.stack(vrsts).mean(dim=0)
-        else:
-            raise NotImplementedError
+        return torch.stack(srsts).mean(dim=0), torch.stack(vrsts).mean(dim=0)
 
 
 class TMDConv(nn.Module):
@@ -264,10 +255,8 @@ class HTNet(nn.Module):
 
         self.in_feats_ = in_feats
         if intensive:
-            aggr = 'mean'
             self.pool = dglnn.glob.AvgPooling()
         else:
-            aggr = 'sum'
             self.pool = dglnn.glob.SumPooling()
 
         self.embed = nn.Embedding(len(atomic_numbers), in_feats)
@@ -280,8 +269,7 @@ class HTNet(nn.Module):
                                in_feats=in_feats, 
                                molecule=molecule)
                 for etype in etypes
-            }, 
-            aggr=aggr
+            }
         )
 
         self.hermconv2 = HeteroTriadicGraphConv(
@@ -293,8 +281,7 @@ class HTNet(nn.Module):
                                in_feats=in_feats, 
                                molecule=molecule)
                 for etype in etypes
-            }, 
-            aggr=aggr
+            }
         )
 
         self.hermconv3 = HeteroTriadicGraphConv(
@@ -306,8 +293,7 @@ class HTNet(nn.Module):
                                in_feats=in_feats, 
                                molecule=molecule)
                 for etype in etypes
-            }, 
-            aggr=aggr
+            }
         )
 
         self.hermconv4 = HeteroTriadicGraphConv(
@@ -319,8 +305,7 @@ class HTNet(nn.Module):
                                in_feats=in_feats, 
                                molecule=molecule)
                 for etype in etypes
-            }, 
-            aggr=aggr
+            }
         )
 
         self.fc = nn.Sequential(nn.Linear(in_feats, in_feats), 
@@ -355,10 +340,8 @@ class HeteroVertexConv(nn.Module):
     ----------
     mods : dict[str, nn.Module]
         Modules associated with every edge types.
-    aggr : str
-        'sum' or 'mean'
     """
-    def __init__(self, mods: Dict[str, nn.Module], aggr: str='sum'):
+    def __init__(self, mods: Dict[str, nn.Module]):
         super(HeteroVertexConv, self).__init__()
         self.mods = nn.ModuleDict(mods)
         
@@ -368,8 +351,6 @@ class HeteroVertexConv(nn.Module):
             set_allow_zero_in_degree_fn = getattr(v, 'set_allow_zero_in_degree', None)
             if callable(set_allow_zero_in_degree_fn):
                 set_allow_zero_in_degree_fn(True)
-
-        self.aggr = aggr
 
     def forward(self, g: DGLGraph, nv: Tensor, ns: Tensor):
         """Forward computation
@@ -401,12 +382,7 @@ class HeteroVertexConv(nn.Module):
             vrsts.append(vrst)
             srsts.append(srst)
 
-        if self.aggr == 'sum':
-            return torch.stack(vrsts).sum(dim=0), torch.stack(srsts).sum(dim=0)
-        elif self.aggr == 'mean':
-            return torch.stack(vrsts).mean(dim=0), torch.stack(srsts).mean(dim=0)
-        else:
-            raise NotImplementedError
+        return torch.stack(vrsts).mean(dim=0), torch.stack(srsts).mean(dim=0)
 
 
 class HVNet(nn.Module):
@@ -433,10 +409,8 @@ class HVNet(nn.Module):
         super(HVNet, self).__init__()
         self.in_feats_ = in_feats
         if intensive:
-            aggr = 'mean'
             self.pool = dglnn.glob.AvgPooling()
         else:
-            aggr = 'sum'
             self.pool = dglnn.glob.SumPooling()
 
         self.embed = nn.Embedding(len(atomic_numbers), in_feats)
@@ -446,7 +420,7 @@ class HVNet(nn.Module):
                                 in_feats=in_feats, 
                                 molecule=molecule)
                   for ntype in elems}, 
-            aggr=aggr)
+        )
 
         self.hermconv2 = HeteroVertexConv(
             mods={ntype: RMConv(rc=rc, 
@@ -454,7 +428,7 @@ class HVNet(nn.Module):
                                 in_feats=in_feats, 
                                 molecule=molecule)
                   for ntype in elems}, 
-            aggr=aggr)
+        )
 
         self.hermconv3 = HeteroVertexConv(
             mods={ntype: RMConv(rc=rc, 
@@ -462,7 +436,7 @@ class HVNet(nn.Module):
                                 in_feats=in_feats, 
                                 molecule=molecule)
                   for ntype in elems}, 
-            aggr=aggr)
+        )
         
         self.hermconv4 = HeteroVertexConv(
             mods={ntype: RMConv(rc=rc, 
@@ -470,7 +444,7 @@ class HVNet(nn.Module):
                                 in_feats=in_feats, 
                                 molecule=molecule)
                   for ntype in elems}, 
-            aggr=aggr)
+        )
 
         self.fc = nn.Sequential(nn.Linear(in_feats, in_feats), 
                                 ShiftedSoftplus(), 
