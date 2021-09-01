@@ -15,7 +15,6 @@ The protocol for using LAMMPS as a client is to use these 3 commands in this ord
   cmake -D PKG_PYTHON=yes -D PKG_MESSAGE=yes  -D PKG_GPU=on -D GPU_API=cuda  -D GPU_ARCH=sm_70 -D CUDPP_OPT=yes -D USE_STATIC_OPENCL_LOADER=no -D PKG_MANYBODY=on -D BUILD_MPI=yes ../cmake/
   ```
 * An example for coupling `LAMMPS` and `HermNet`:
-  ```
-  mpirun -np 1 lmp -v mode file -in in.message.client
-  python hermnet4lmp.py -m="file" -d cuda -f 'CH.pt' -r 5. -s 100.
-  ```
+    > Running the following two commands in seperate windows:
+      `mpirun -np 1 lmp -v mode file -in in.message.client` and
+      `python hermnet4lmp.py -m="file" -d cuda -f 'CH.pt' -r 5.  -s 100.`

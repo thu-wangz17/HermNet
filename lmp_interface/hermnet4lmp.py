@@ -158,10 +158,7 @@ if __name__ == '__main__':
         cs.send(msgID, 2)
         cs.pack(FORCES, 4, 3*natoms, forces.tolist())
         cs.pack_double(ENERGY, energy)
-        if virial is None:
-            print('Virial calculations have not been implemented.')
-        else:
-            cs.pack(VIRIAL, 4, 6, virial)
+        cs.pack(VIRIAL, 4, 6, virial.tolist())
 
     # final reply to client
     cs.send(0, 0)
