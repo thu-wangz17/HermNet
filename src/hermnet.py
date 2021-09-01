@@ -129,12 +129,13 @@ class TMDConv(nn.Module):
         Molecules or crystals
     """
     def __init__(self, etype: str, rc: float, l: int, in_feats: int, 
-                 molecule: bool=True):
+                 molecule: bool=True, virial : bool=True):
         super(TMDConv, self).__init__()
         self.src1, _, self.src2 = etype.split('-')
         self.mask1, self.mask2 = atomic_numbers[self.src1], atomic_numbers[self.src2]
 
         self.molecule = molecule
+        self.virial = virial
 
         self.ms1 = nn.Linear(in_feats, in_feats)
         self.silu = ShiftedSoftplus()
@@ -151,8 +152,11 @@ class TMDConv(nn.Module):
         sj, vj = edges.src['s'], edges.src['v']
         x_i, x_j = edges.src['x'], edges.dst['x']
         if self.molecule:
-            vec = x_i - x_j
-            r = torch.sqrt((vec ** 2).sum(dim=-1) + _eps).unsqueeze(-1)
+            self.vec = x_i - x_j
+            r = torch.sqrt((self.vec ** 2).sum(dim=-1) + _eps).unsqueeze(-1)
+
+            if self.virial:
+                self.vec.retain_grad()
         else:
             r, vec = [], []
             for n1 in [-1, 0, 1]:
@@ -166,8 +170,11 @@ class TMDConv(nn.Module):
 
             r, idx = torch.min(torch.stack(r, dim=-1), dim=-1)
             r = r.unsqueeze(-1).to(x_i.device)
-            vec = torch.gather(torch.stack(vec, dim=-1), 2, 
-                               idx.view(-1, 1, 1).repeat(1, 3, 1)).squeeze(-1).to(x_i.device)
+            self.vec = torch.gather(torch.stack(vec, dim=-1), 2, 
+                                    idx.view(-1, 1, 1).repeat(1, 3, 1)).squeeze(-1).to(x_i.device)
+            
+            if self.virial:
+                self.vec.retain_grad()
 
         phi = self.ms2(self.silu(self.ms1(sj)))
         w = self.fc(self.mv(self.rbf(r)))
@@ -244,7 +251,7 @@ class HTNet(nn.Module):
     """
     def __init__(self, elems: Union[str, List[str]], rc: float, l: int, 
                  in_feats: int, molecule: bool=True, 
-                 intensive: bool=False):
+                 intensive: bool=False, virial: bool=True):
         super(HTNet, self).__init__()
         etypes = []
         for etype in product(elems, repeat=3):
@@ -267,7 +274,8 @@ class HTNet(nn.Module):
                                rc=rc, 
                                l=l, 
                                in_feats=in_feats, 
-                               molecule=molecule)
+                               molecule=molecule, 
+                               virial=virial)
                 for etype in etypes
             }
         )
@@ -279,7 +287,8 @@ class HTNet(nn.Module):
                                rc=rc, 
                                l=l, 
                                in_feats=in_feats, 
-                               molecule=molecule)
+                               molecule=molecule, 
+                               virial=virial)
                 for etype in etypes
             }
         )
@@ -291,7 +300,8 @@ class HTNet(nn.Module):
                                rc=rc, 
                                l=l, 
                                in_feats=in_feats, 
-                               molecule=molecule)
+                               molecule=molecule, 
+                               virial=virial)
                 for etype in etypes
             }
         )
@@ -303,7 +313,8 @@ class HTNet(nn.Module):
                                rc=rc, 
                                l=l, 
                                in_feats=in_feats, 
-                               molecule=molecule)
+                               molecule=molecule, 
+                               virial=virial)
                 for etype in etypes
             }
         )
@@ -405,7 +416,7 @@ class HVNet(nn.Module):
     """
     def __init__(self, elems: Union[str, List[str]], rc: float, l: int, 
                  in_feats: int, molecule: bool=True, 
-                 intensive: bool=False):
+                 intensive: bool=False, virial: bool=True):
         super(HVNet, self).__init__()
         self.in_feats_ = in_feats
         if intensive:
@@ -418,7 +429,8 @@ class HVNet(nn.Module):
             mods={ntype: RMConv(rc=rc, 
                                 l=l, 
                                 in_feats=in_feats, 
-                                molecule=molecule)
+                                molecule=molecule, 
+                                virial=virial)
                   for ntype in elems}, 
         )
 
@@ -426,7 +438,8 @@ class HVNet(nn.Module):
             mods={ntype: RMConv(rc=rc, 
                                 l=l, 
                                 in_feats=in_feats, 
-                                molecule=molecule)
+                                molecule=molecule, 
+                                virial=virial)
                   for ntype in elems}, 
         )
 
@@ -434,7 +447,8 @@ class HVNet(nn.Module):
             mods={ntype: RMConv(rc=rc, 
                                 l=l, 
                                 in_feats=in_feats, 
-                                molecule=molecule)
+                                molecule=molecule, 
+                                virial=virial)
                   for ntype in elems}, 
         )
         
@@ -442,7 +456,8 @@ class HVNet(nn.Module):
             mods={ntype: RMConv(rc=rc, 
                                 l=l, 
                                 in_feats=in_feats, 
-                                molecule=molecule)
+                                molecule=molecule, 
+                                virial=virial)
                   for ntype in elems}, 
         )
 

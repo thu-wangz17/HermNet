@@ -77,9 +77,10 @@ class RMConv(nn.Module):
         Molecules or crystals
     """
     def __init__(self, rc: float, l: int, in_feats: int, 
-                 molecule: bool=True):
+                 molecule: bool=True, virial: bool=True):
         super(RMConv, self).__init__()
         self.molecule = molecule
+        self.virial = virial
 
         self.ms1 = nn.Linear(in_feats, in_feats)
         self.silu = ShiftedSoftplus()
@@ -98,8 +99,11 @@ class RMConv(nn.Module):
         sj, vj = edges.src['s'], edges.src['v']
         x_i, x_j = edges.src['x'], edges.dst['x']
         if self.molecule:
-            vec = x_i - x_j
-            r = torch.sqrt((vec ** 2).sum(dim=-1) + _eps).unsqueeze(-1)
+            self.vec = x_i - x_j
+            if self.virial:
+                self.vec.retain_grad()
+
+            r = torch.sqrt((self.vec ** 2).sum(dim=-1) + _eps).unsqueeze(-1)
         else:
             r, vec = [], []
             for n1 in [-1, 0, 1]:
@@ -113,13 +117,16 @@ class RMConv(nn.Module):
 
             r, idx = torch.min(torch.stack(r, dim=-1), dim=-1)
             r = r.unsqueeze(-1).to(x_i.device)
-            vec = torch.gather(torch.stack(vec, dim=-1), 2, 
-                               idx.view(-1, 1, 1).repeat(1, 3, 1)).squeeze(-1).to(x_i.device)
+            self.vec = torch.gather(torch.stack(vec, dim=-1), 2, 
+                                    idx.view(-1, 1, 1).repeat(1, 3, 1)).squeeze(-1).to(x_i.device)
+
+            if self.virial:
+                self.vec.retain_grad()
 
         phi = self.ms2(self.dropout(self.silu(self.ms1(sj))))
         w = self.fc(r) * self.mv(self.rbf(r))
         v_, s_, r_ = torch.chunk(phi * w, 3, dim=-1)
-        return {'dv_': vj * v_.unsqueeze(-1) + r_.unsqueeze(-1) * (vec / r).unsqueeze(1), 'ds_': s_}
+        return {'dv_': vj * v_.unsqueeze(-1) + r_.unsqueeze(-1) * (self.vec / r).unsqueeze(1), 'ds_': s_}
 
     def reduce1(self, nodes):
         dv_, ds_ = nodes.mailbox['dv_'], nodes.mailbox['ds_']
