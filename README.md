@@ -48,3 +48,11 @@ The code has been tested with the libraries whose versions could be found in [`r
 * Install ```DGL``` with ```pip install --pre dgl``` (CPU version) or ```pip install --pre dgl-${CUDA}``` (GPU version).
 
 ## Citation
+```
+@article{wang2021heterogeneous,
+  title={Heterogeneous relational message passing networks for molecular dynamics simulations},
+  author={Wang, Zun and Wang, Chong and Zhao, Sibo and Xu, Yong and Hao, Shaogang and Hsieh, Chang Yu and Gu, Bing-Lin and Duan, Wenhui},
+  journal={arXiv preprint arXiv:2109.00711},
+  year={2021}
+}
+```
