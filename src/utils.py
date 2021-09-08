@@ -41,6 +41,27 @@ def neighbors(cell: ndarray, coord0: ndarray, coord1: ndarray, rc: float):
     return u, v
 
 
+def pbc_virial_calc(cell, pos, forces, energy, units='metal', pbc=False):
+    if units == 'metal':
+        nktv2p = 1.6021765e6
+    elif units in ['lj', 'si', 'cgs', 'micro', 'nano']:
+        nktv2p = 1.0
+    elif units == 'real':
+        nktv2p = 68568.415
+    elif units == 'electron':
+        nktv2p = 2.94210108e13
+    else:
+        raise ValueError('Illegal units command')
+
+    volume = torch.det(cell)
+
+    if pbc:
+        assert cell.requires_grad
+        return torch.autograd.grad(energy, cell, grad_outputs=None) * nktv2p / volume
+    else:
+        return torch.einsum('ij, ik->jk', pos, forces) * nktv2p / volume
+
+
 def _collate(samples):
     g, e = zip(*samples)
     bg = dgl.batch(g)

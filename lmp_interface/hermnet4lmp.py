@@ -5,8 +5,9 @@ import numpy as np
 import dgl
 import torch
 import argparse
+import warnings
 from cslib import CSlib
-from hmdnet.utils import neighbors
+from hmdnet.utils import neighbors, virial_calc
 
 def build_graph(cell, elements, pos, rc):
     u, v = neighbors(cell=cell, coord0=pos, coord1=pos, rc=rc)
@@ -19,48 +20,88 @@ def build_graph(cell, elements, pos, rc):
     return g
 
 
-def calculator(g, model_path, trn_mean, device):
+def calculator(g, model_path, trn_mean, device, pbc, units, 
+               ensemble='NVT', uncert=False, shreshold=None, nums=100):
     device = torch.device(device)
 
     g = g.to(device)
-    model = torch.load(model_path, map_location=device)
     g.ndata['x'].requires_grad = True
 
+    model = torch.load(model_path, map_location=device)
+    model.eval()
+
     energy = model(g) + trn_mean
-    forces = - torch.autograd.grad(energy.sum(), g.ndata['x'])[0]
-    return energy.detach().cpu().numpy().item(), forces.detach().cpu().view(-1).numpy(), None
+    if pbc:
+        forces = - torch.autograd.grad(
+            energy.sum(), g.ndata['x'], retain_graph=True
+        )[0].detach().cpu().view(-1).numpy()
+    else:
+        forces = - torch.autograd.grad(
+            energy.sum(), g.ndata['x']
+        )[0].detach().cpu().view(-1).numpy()
+
+    if ensemble.lower() == 'npt':
+        if pbc:
+            g.ndata['cell'].requires_grad = True
+
+        virial = virial_calc(
+            cell=g.ndata['cell'], 
+            pos=g.ndata['x'], 
+            forces=forces, 
+            energy=energy, 
+            units=units, 
+            pbc=pbc
+        ).detach().cpu().numpy()
+    else:
+        virial = np.array([0., 0., 0., 0., 0., 0.], dtype=np.float32)
+
+    if uncert:
+        assert shreshold
+
+        model.train()
+        bagging_energies = []
+        for _ in range(nums):
+            bagging_energies.append(model(g).detach().cpu().item())
+
+        uncertainty = np.array(bagging_energies).mean()
+        print('The energy uncertainty of current configuration = {:.3f}.'.format(uncertainty))
+        if uncertainty > shreshold:
+            warnings.warn('Uncertainty is larger than shreshold {:.3f}.'
+                'Keep simulating maybe dangerous.'
+                    'Suggest training the model with more related data'.format(shreshold))
+
+    return energy.detach().cpu().item(), forces, virial
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="HermNet works as a server for LAMMPS.")
-    parser.add_argument('-m', '--mode', 
-                        help='The mode for exchange messages', 
-                        type=str, 
-                        choices=['file', 'zmq'], 
-                        # choices=['file', 'zmq', 'mpi/one', 'mpi/two'],  # Don't support MPI currently
-                        default='zmq')
-    parser.add_argument('-p', '--ptr', 
-                        help='Filename or socket ID or MPI communicator', 
-                        type=str, 
-                        default='tmp.couple')
+    parser.add_argument(
+        '-m', '--mode', help='The mode for exchange messages', 
+        # choices=['file', 'zmq', 'mpi/one', 'mpi/two'],  # Don't support MPI currently
+        type=str, choices=['file', 'zmq'], default='zmq'
+    )
+    parser.add_argument(
+        '-p', '--ptr', help='Filename or socket ID or MPI communicator', 
+        type=str, default='tmp.couple'
+    )
     # parser.add_argument('-c', '--MPI', help='MPI communicator', default=MPI.COMM_WORLD)
-    parser.add_argument('-d', '--device', 
-                        help='Device to allocate hmdnet', 
-                        type=str, 
-                        choices=['cpu', 'cuda'], 
-                        default='cpu')
-    parser.add_argument('-f', '--model', 
-                        help='The path that saves trained model', 
-                        type=str, 
-                        required=True)
-    parser.add_argument('-s', '--stats', 
-                        help='The mean value of trainset that shifts the output of model', 
-                        type=float, 
-                        required=True)
-    parser.add_argument('-r', '--radius', 
-                        help='Cutof radius', 
-                        type=float, 
-                        required=True)
+    parser.add_argument(
+        '-d', '--device', help='Device to allocate HermNet', 
+        type=str, choices=['cpu', 'cuda'], default='cpu'
+    )
+    parser.add_argument(
+        '-f', '--model', help='The path that saves trained model', type=str, required=True
+    )
+    parser.add_argument(
+        '-s', '--stats', help='The mean value of trainset that shifts the output of model', 
+        type=float, required=True
+    )
+    parser.add_argument('-r', '--radius', help='Cutof radius', type=float, required=True)
+    parser.add_argument(
+        '-c', '--periodic', help='If the system is PBC or not', type=bool, required=True
+    )
+    parser.add_argument('-u', '--units', help='Units', type=str, default='metal')
+    parser.add_argument('-e', '--ensemble', help='Ensemble', type=str, default='NVT')              
 
     args = parser.parse_args()
 
@@ -95,7 +136,7 @@ if __name__ == '__main__':
          / _  / -_/ __/  ' \/    / -_/ __/
         /_//_/\__/_/ /_/_/_/_/|_/\__/\__/ 
 
-        @author: Zun Wang
+        @authors: Zun Wang
     """)
 
     while 1:
@@ -150,9 +191,11 @@ if __name__ == '__main__':
         elements = np.array(types)
         pos = np.array(coords).reshape(natoms, 3)
 
-        g = build_graph(cell=cell, elements=elements, pos=pos, rc=args.radius)
-        energy, forces, virial = calculator(g=g, model_path=args.model, 
-                                            trn_mean=args.stats, device=args.device)
+        g = build_graph(cell=cell, elements=elements, pos=pos, rc=args.radius, dropout=0)
+        energy, forces, virial = calculator(
+            g=g, model_path=args.model, trn_mean=args.stats, device=args.device, 
+            pbc=args.periodic, units=args.units, ensemble=args.ensemble
+        )
 
         # return forces, energy, pressure to client
         cs.send(msgID, 2)

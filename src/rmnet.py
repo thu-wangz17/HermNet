@@ -75,12 +75,13 @@ class RMConv(nn.Module):
         Dimension of nodes' and edges' input
     molecule    : bool
         Molecules or crystals
+    dropout     : float
+        The probability of dropout
     """
     def __init__(self, rc: float, l: int, in_feats: int, 
-                 molecule: bool=True, virial: bool=True):
+                 molecule: bool=True, dropout=0.5):
         super(RMConv, self).__init__()
         self.molecule = molecule
-        self.virial = virial
 
         self.ms1 = nn.Linear(in_feats, in_feats)
         self.silu = ShiftedSoftplus()
@@ -93,16 +94,13 @@ class RMConv(nn.Module):
         self.us1 = nn.Linear(in_feats * 2, in_feats)
         self.us2 = nn.Linear(in_feats, in_feats * 3)
 
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(dropout)
 
     def message1(self, edges):
         sj, vj = edges.src['s'], edges.src['v']
         x_i, x_j = edges.src['x'], edges.dst['x']
         if self.molecule:
-            self.vec = x_i - x_j
-            if self.virial:
-                self.vec.retain_grad()
-
+            vec = x_i - x_j
             r = torch.sqrt((self.vec ** 2).sum(dim=-1) + _eps).unsqueeze(-1)
         else:
             r, vec = [], []
@@ -117,11 +115,8 @@ class RMConv(nn.Module):
 
             r, idx = torch.min(torch.stack(r, dim=-1), dim=-1)
             r = r.unsqueeze(-1).to(x_i.device)
-            self.vec = torch.gather(torch.stack(vec, dim=-1), 2, 
-                                    idx.view(-1, 1, 1).repeat(1, 3, 1)).squeeze(-1).to(x_i.device)
-
-            if self.virial:
-                self.vec.retain_grad()
+            vec = torch.gather(torch.stack(vec, dim=-1), 2, 
+                               idx.view(-1, 1, 1).repeat(1, 3, 1)).squeeze(-1).to(x_i.device)
 
         phi = self.ms2(self.dropout(self.silu(self.ms1(sj))))
         w = self.fc(r) * self.mv(self.rbf(r))

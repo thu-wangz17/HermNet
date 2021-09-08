@@ -129,13 +129,12 @@ class TMDConv(nn.Module):
         Molecules or crystals
     """
     def __init__(self, etype: str, rc: float, l: int, in_feats: int, 
-                 molecule: bool=True, virial : bool=True):
+                 molecule: bool=True, dropout=0.5):
         super(TMDConv, self).__init__()
         self.src1, _, self.src2 = etype.split('-')
         self.mask1, self.mask2 = atomic_numbers[self.src1], atomic_numbers[self.src2]
 
         self.molecule = molecule
-        self.virial = virial
 
         self.ms1 = nn.Linear(in_feats, in_feats)
         self.silu = ShiftedSoftplus()
@@ -148,15 +147,14 @@ class TMDConv(nn.Module):
         self.us1 = nn.Linear(in_feats, in_feats)
         self.us2 = nn.Linear(in_feats, in_feats * 3)
 
+        self.dropout = nn.Dropout(dropout)
+
     def message1(self, edges):
         sj, vj = edges.src['s'], edges.src['v']
         x_i, x_j = edges.src['x'], edges.dst['x']
         if self.molecule:
-            self.vec = x_i - x_j
+            vec = x_i - x_j
             r = torch.sqrt((self.vec ** 2).sum(dim=-1) + _eps).unsqueeze(-1)
-
-            if self.virial:
-                self.vec.retain_grad()
         else:
             r, vec = [], []
             for n1 in [-1, 0, 1]:
@@ -170,13 +168,10 @@ class TMDConv(nn.Module):
 
             r, idx = torch.min(torch.stack(r, dim=-1), dim=-1)
             r = r.unsqueeze(-1).to(x_i.device)
-            self.vec = torch.gather(torch.stack(vec, dim=-1), 2, 
-                                    idx.view(-1, 1, 1).repeat(1, 3, 1)).squeeze(-1).to(x_i.device)
-            
-            if self.virial:
-                self.vec.retain_grad()
+            vec = torch.gather(torch.stack(vec, dim=-1), 2, 
+                               idx.view(-1, 1, 1).repeat(1, 3, 1)).squeeze(-1).to(x_i.device)
 
-        phi = self.ms2(self.silu(self.ms1(sj)))
+        phi = self.ms2(self.dropout(self.silu(self.ms1(sj))))
         w = self.fc(self.mv(self.rbf(r)))
         v_, s_, r_ = torch.chunk(phi * w, 3, dim=-1)
         return {'dv_': vj * v_.unsqueeze(-1) + r_.unsqueeze(-1) * (vec / r).unsqueeze(1), 'ds_': s_}
@@ -187,7 +182,7 @@ class TMDConv(nn.Module):
 
     def message2(self, edges):
         vj, sj = edges.src['v_new'], edges.src['s_new']
-        s_ = self.us2(self.silu(self.us1(sj)))
+        s_ = self.us2(self.dropout(self.silu(self.us1(sj))))
         if self.src1 == self.src2:
             return {'vj': vj, 's_': s_}
         else:
@@ -248,10 +243,12 @@ class HTNet(nn.Module):
         Molecules or crystals
     intensive   : bool
         Intensive quantity or extensive quantity
+    dropout     : float
+        The probability of dropout
     """
     def __init__(self, elems: Union[str, List[str]], rc: float, l: int, 
                  in_feats: int, molecule: bool=True, 
-                 intensive: bool=False, virial: bool=True):
+                 intensive: bool=False, dropout=0.5):
         super(HTNet, self).__init__()
         etypes = []
         for etype in product(elems, repeat=3):
@@ -275,7 +272,7 @@ class HTNet(nn.Module):
                                l=l, 
                                in_feats=in_feats, 
                                molecule=molecule, 
-                               virial=virial)
+                               dropout=dropout)
                 for etype in etypes
             }
         )
@@ -288,7 +285,7 @@ class HTNet(nn.Module):
                                l=l, 
                                in_feats=in_feats, 
                                molecule=molecule, 
-                               virial=virial)
+                               dropout=dropout)
                 for etype in etypes
             }
         )
@@ -301,7 +298,7 @@ class HTNet(nn.Module):
                                l=l, 
                                in_feats=in_feats, 
                                molecule=molecule, 
-                               virial=virial)
+                               dropout=dropout)
                 for etype in etypes
             }
         )
@@ -314,13 +311,14 @@ class HTNet(nn.Module):
                                l=l, 
                                in_feats=in_feats, 
                                molecule=molecule, 
-                               virial=virial)
+                               dropout=dropout)
                 for etype in etypes
             }
         )
 
         self.fc = nn.Sequential(nn.Linear(in_feats, in_feats), 
                                 ShiftedSoftplus(), 
+                                nn.Dropout(0.5), 
                                 nn.Linear(in_feats, 1))
 
     def forward(self, g):
@@ -413,10 +411,12 @@ class HVNet(nn.Module):
         Molecules or crystals
     intensive   : bool
         Intensive quantity or extensive quantity
+    dropout     : float
+        The probability of dropout
     """
     def __init__(self, elems: Union[str, List[str]], rc: float, l: int, 
                  in_feats: int, molecule: bool=True, 
-                 intensive: bool=False, virial: bool=True):
+                 intensive: bool=False, dropout=0.5):
         super(HVNet, self).__init__()
         self.in_feats_ = in_feats
         if intensive:
@@ -430,7 +430,7 @@ class HVNet(nn.Module):
                                 l=l, 
                                 in_feats=in_feats, 
                                 molecule=molecule, 
-                                virial=virial)
+                                dropout=dropout)
                   for ntype in elems}, 
         )
 
@@ -439,7 +439,7 @@ class HVNet(nn.Module):
                                 l=l, 
                                 in_feats=in_feats, 
                                 molecule=molecule, 
-                                virial=virial)
+                                dropout=dropout)
                   for ntype in elems}, 
         )
 
@@ -448,7 +448,7 @@ class HVNet(nn.Module):
                                 l=l, 
                                 in_feats=in_feats, 
                                 molecule=molecule, 
-                                virial=virial)
+                                dropout=dropout)
                   for ntype in elems}, 
         )
         
@@ -457,12 +457,13 @@ class HVNet(nn.Module):
                                 l=l, 
                                 in_feats=in_feats, 
                                 molecule=molecule, 
-                                virial=virial)
+                                dropout=dropout)
                   for ntype in elems}, 
         )
 
         self.fc = nn.Sequential(nn.Linear(in_feats, in_feats), 
                                 ShiftedSoftplus(), 
+                                nn.Dropout(0.5), 
                                 nn.Linear(in_feats, 1))
 
     def forward(self, g):
