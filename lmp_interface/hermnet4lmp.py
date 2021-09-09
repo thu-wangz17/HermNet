@@ -213,7 +213,7 @@ if __name__ == '__main__':
         )
 
         # return forces, energy, pressure to client
-        cs.send(msgID, 2)
+        cs.send(msgID, 3)
         cs.pack(FORCES, 4, 3*natoms, forces.tolist())
         cs.pack_double(ENERGY, energy)
         cs.pack(VIRIAL, 4, 6, virial.tolist())
