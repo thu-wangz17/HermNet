@@ -7,7 +7,8 @@ import torch
 import argparse
 import warnings
 from cslib import CSlib
-from hmdnet.utils import neighbors, virial_calc
+from hermnet.utils import neighbors, virial_calc
+from hermnet.hermnet import HVNet
 
 def build_graph(cell, elements, pos, rc):
     u, v = neighbors(cell=cell, coord0=pos, coord1=pos, rc=rc)
@@ -21,13 +22,16 @@ def build_graph(cell, elements, pos, rc):
 
 
 def calculator(g, model_path, trn_mean, device, pbc, units, 
-               ensemble='NVT', uncert=False, shreshold=None, nums=100):
+               elems, rc, l, in_feats, ensemble='NVT', 
+               uncert=False, shreshold=None, nums=100):
     device = torch.device(device)
 
     g = g.to(device)
     g.ndata['x'].requires_grad = True
 
-    model = torch.load(model_path, map_location=device)
+    model = HVNet(elems, rc, l, in_feats, molecule=not(pbc), 
+                  intensive=False, dropout=0.0).to(device)
+    model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
 
     energy = model(g) + trn_mean
@@ -59,6 +63,7 @@ def calculator(g, model_path, trn_mean, device, pbc, units,
         assert shreshold
 
         model.train()
+        
         bagging_energies = []
         for _ in range(nums):
             bagging_energies.append(model(g).detach().cpu().item())
@@ -98,12 +103,15 @@ if __name__ == '__main__':
     )
     parser.add_argument('-r', '--radius', help='Cutof radius', type=float, required=True)
     parser.add_argument(
-        '-c', '--periodic', help='If the system is PBC or not', type=bool, required=True
+        '-c', '--periodic', help='If the system is PBC or not', type=str, required=True
     )
     parser.add_argument('-u', '--units', help='Units', type=str, default='metal')
+    parser.add_argument('-t', '--elems', help='Elements', type=str, nargs='*', required=True)
+    parser.add_argument('-l', help='l', type=int, default=30)
+    parser.add_argument('-i', '--infeats', help='In_feats', type=int, default=128)
     parser.add_argument('-e', '--ensemble', help='Ensemble', type=str, default='NVT')
     parser.add_argument(
-        '-u', '--uncertain', help='Whether to output uncertainty', type=bool, default=False
+        '-a', '--uncertain', help='Whether to output uncertainty', type=str, default='False'
     )
     parser.add_argument('-v', '--shreshold', help='Shreshold for uncertainty', type=float)
     parser.add_argument('-b', '--bags', help='Number of bagging', type=int, default=100)
@@ -196,11 +204,12 @@ if __name__ == '__main__':
         elements = np.array(types)
         pos = np.array(coords).reshape(natoms, 3)
 
-        g = build_graph(cell=cell, elements=elements, pos=pos, rc=args.radius, dropout=0)
+        g = build_graph(cell=cell, elements=elements, pos=pos, rc=args.radius)
         energy, forces, virial = calculator(
             g=g, model_path=args.model, trn_mean=args.stats, device=args.device, 
-            pbc=args.periodic, units=args.units, ensemble=args.ensemble, 
-            uncert=args.uncertain, shreshold=args.shreshold, nums=args.bags
+            pbc=eval(args.periodic), units=args.units, elems=args.elems, rc=args.radius, 
+            l=args.l, in_feats=args.infeats, ensemble=args.ensemble, 
+            uncert=eval(args.uncertain), shreshold=args.shreshold, nums=args.bags
         )
 
         # return forces, energy, pressure to client

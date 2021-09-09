@@ -154,7 +154,7 @@ class TMDConv(nn.Module):
         x_i, x_j = edges.src['x'], edges.dst['x']
         if self.molecule:
             vec = x_i - x_j
-            r = torch.sqrt((self.vec ** 2).sum(dim=-1) + _eps).unsqueeze(-1)
+            r = torch.sqrt((vec ** 2).sum(dim=-1) + _eps).unsqueeze(-1)
         else:
             r, vec = [], []
             for n1 in [-1, 0, 1]:
