@@ -63,7 +63,7 @@ def calculator(g, model_path, trn_mean, device, pbc, units,
         for _ in range(nums):
             bagging_energies.append(model(g).detach().cpu().item())
 
-        uncertainty = np.array(bagging_energies).mean()
+        uncertainty = np.array(bagging_energies).std()
         print('The energy uncertainty of current configuration = {:.3f}.'.format(uncertainty))
         if uncertainty > shreshold:
             warnings.warn('Uncertainty is larger than shreshold {:.3f}.'
@@ -101,7 +101,12 @@ if __name__ == '__main__':
         '-c', '--periodic', help='If the system is PBC or not', type=bool, required=True
     )
     parser.add_argument('-u', '--units', help='Units', type=str, default='metal')
-    parser.add_argument('-e', '--ensemble', help='Ensemble', type=str, default='NVT')              
+    parser.add_argument('-e', '--ensemble', help='Ensemble', type=str, default='NVT')
+    parser.add_argument(
+        '-u', '--uncertain', help='Whether to output uncertainty', type=bool, default=False
+    )
+    parser.add_argument('-v', '--shreshold', help='Shreshold for uncertainty', type=float)
+    parser.add_argument('-b', '--bags', help='Number of bagging', type=int, default=100)
 
     args = parser.parse_args()
 
@@ -194,7 +199,8 @@ if __name__ == '__main__':
         g = build_graph(cell=cell, elements=elements, pos=pos, rc=args.radius, dropout=0)
         energy, forces, virial = calculator(
             g=g, model_path=args.model, trn_mean=args.stats, device=args.device, 
-            pbc=args.periodic, units=args.units, ensemble=args.ensemble
+            pbc=args.periodic, units=args.units, ensemble=args.ensemble, 
+            uncert=args.uncertain, shreshold=args.shreshold, nums=args.bags
         )
 
         # return forces, energy, pressure to client

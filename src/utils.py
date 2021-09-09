@@ -41,7 +41,7 @@ def neighbors(cell: ndarray, coord0: ndarray, coord1: ndarray, rc: float):
     return u, v
 
 
-def pbc_virial_calc(cell, pos, forces, energy, units='metal', pbc=False):
+def virial_calc(cell, pos, forces, energy, units='metal', pbc=False):
     if units == 'metal':
         nktv2p = 1.6021765e6
     elif units in ['lj', 'si', 'cgs', 'micro', 'nano']:
