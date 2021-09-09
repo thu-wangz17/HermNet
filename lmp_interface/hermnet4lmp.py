@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import dgl
 import torch
+from tqdm import tqdm
 import argparse
 import warnings
 from cslib import CSlib
@@ -65,7 +66,7 @@ def calculator(g, model_path, trn_mean, device, pbc, units,
         model.train()
         
         bagging_energies = []
-        for _ in range(nums):
+        for _ in tqdm(range(nums), ncols=80, ascii=True, desc='MCDropout'):
             bagging_energies.append(model(g).detach().cpu().item())
 
         uncertainty = np.array(bagging_energies).std()
