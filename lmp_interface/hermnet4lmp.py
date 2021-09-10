@@ -73,9 +73,9 @@ def calculator(g, cell, model_path, trn_mean, device, pbc,
         uncertainty = np.array(bagging_energies).std() / g.num_nodes() * 1000
         print('The energy uncertainty of current configuration = {:.3f} meV.'.format(uncertainty))
         if uncertainty > shreshold:
-            warnings.warn('Uncertainty is larger than shreshold {:.3f}.'
-                'Keep simulating maybe dangerous.'
-                    'Suggest training the model with more related data'.format(shreshold))
+            warnings.warn('Uncertainty is larger than shreshold. '
+                'Keep simulating maybe dangerous. '
+                    'Suggest training the model with more related data')
 
     return energy.detach().cpu().item(), forces, virial
 
