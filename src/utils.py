@@ -57,9 +57,14 @@ def virial_calc(cell, pos, forces, energy, units='metal', pbc=False):
         assert cell.requires_grad
         
         volume = torch.det(cell)
-        return - 3 * volume * torch.autograd.grad(energy, cell) * nktv2p
+        virial = torch.autograd.grad(energy, cell)[0]
+        virial = (virial + virial.T) / 2
+        virial =  - 3 * volume * virial * nktv2p
     else:
-        return torch.einsum('ij, ik->jk', pos, forces) * nktv2p
+        virial = torch.einsum('ij, ik->jk', pos, forces) * nktv2p
+        virial = (virial + virial.T) / 2
+
+    return virial
 
 
 def _collate(samples):

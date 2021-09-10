@@ -22,25 +22,22 @@ def build_graph(cell, elements, pos, rc):
     return g
 
 
-def calculator(g, cell, model_path, trn_mean, device, pbc, 
-               units, elems, rc, l, in_feats, ensemble='NVT', 
-               uncert=False, shreshold=None, nums=100):
+def calculator(g, cell, model, trn_mean, device, pbc, units, 
+               ensemble='NVT', uncert=False, shreshold=None, nums=100):
     device = torch.device(device)
 
     g = g.to(device)
     g.ndata['x'].requires_grad = True
 
-    cell = torch.from_numpy(cell).float().to(device)
+    if cell is not None:
+        cell = torch.from_numpy(cell).float().to(device)
 
     if ensemble.lower() == 'npt' and pbc:
         cell.requires_grad = True
 
-    model = HVNet(elems, rc, l, in_feats, molecule=not(pbc), cell=cell, 
-                  intensive=False, dropout=0.0, train=False).to(device)
-    model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
 
-    energy = model(g) + trn_mean
+    energy = model(g, cell) + trn_mean
     if pbc:
         forces = - torch.autograd.grad(
             energy.sum(), g.ndata['x'], retain_graph=True
@@ -57,7 +54,10 @@ def calculator(g, cell, model_path, trn_mean, device, pbc,
         virial = virial_calc(
             cell=cell, pos=g.ndata['x'], forces=forces, 
             energy=energy, units=units, pbc=pbc
-        )[0].detach().cpu().numpy()
+        ).detach().cpu().numpy()
+        virial = np.array(
+            [virial[0, 1], virial[1, 1], virial[2, 2], virial[0, 1], virial[0, 2], virial[1, 2]]
+        )
     else:
         virial = np.array([0., 0., 0., 0., 0., 0.], dtype=np.float32)
 
@@ -68,7 +68,7 @@ def calculator(g, cell, model_path, trn_mean, device, pbc,
         
         bagging_energies = []
         for _ in tqdm(range(nums), ncols=80, ascii=True, desc='MCDropout'):
-            bagging_energies.append(model(g).detach().cpu().item())
+            bagging_energies.append(model(g, cell).detach().cpu().item())
 
         uncertainty = np.array(bagging_energies).std() / g.num_nodes() * 1000
         print('The energy uncertainty of current configuration = {:.3f} meV.'.format(uncertainty))
@@ -119,6 +119,14 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--bags', help='Number of bagging', type=int, default=100)
 
     args = parser.parse_args()
+
+    # Load model
+    device = torch.device(args.device)
+
+    model = HVNet(elems=args.elems, rc=args.radius, l=args.l, in_feats=args.infeats, 
+                  molecule=not(eval(args.periodic)), intensive=False, 
+                  dropout=0.0, md=True).to(device)
+    model.load_state_dict(torch.load(args.model, map_location=device))
 
     # enums matching FixClientMD class in LAMMPS
     SETUP, STEP = 1, 2
@@ -208,9 +216,8 @@ if __name__ == '__main__':
 
         g = build_graph(cell=cell, elements=elements, pos=pos, rc=args.radius)
         energy, forces, virial = calculator(
-            g=g, cell=cell, model_path=args.model, trn_mean=args.stats, device=args.device, 
-            pbc=eval(args.periodic), units=args.units, elems=args.elems, rc=args.radius, 
-            l=args.l, in_feats=args.infeats, ensemble=args.ensemble, 
+            g=g, cell=cell, model=model, trn_mean=args.stats, device=args.device, 
+            pbc=eval(args.periodic), units=args.units, ensemble=args.ensemble, 
             uncert=eval(args.uncertain), shreshold=args.shreshold, nums=args.bags
         )
 

@@ -75,7 +75,7 @@ class HeteroTriadicGraphConv(nn.Module):
             if callable(set_allow_zero_in_degree_fn):
                 set_allow_zero_in_degree_fn(True)
 
-    def forward(self, g, ns, nv):
+    def forward(self, g, ns, nv, cell=None):
         """Forward computation
         Invoke the forward function with each module and aggregate their results.
 
@@ -104,7 +104,7 @@ class HeteroTriadicGraphConv(nn.Module):
             if sub_g.number_of_edges() == 0:
                 continue
 
-            dst_s, dst_v = self.mods[triplet](sub_g, ns, nv)
+            dst_s, dst_v = self.mods[triplet](sub_g, ns, nv, cell)
 
             srsts.append(dst_s)
             vrsts.append(dst_v)
@@ -129,19 +129,13 @@ class TMDConv(nn.Module):
         Molecules or crystals
     """
     def __init__(self, etype: str, rc: float, l: int, in_feats: int, 
-                 molecule: bool=True, cell: Union[None, Tensor]=None, 
-                 dropout: float=0.5, train: bool=True):
+                 molecule: bool=True, dropout: float=0.5, md: bool=False):
         super(TMDConv, self).__init__()
         self.src1, _, self.src2 = etype.split('-')
         self.mask1, self.mask2 = atomic_numbers[self.src1], atomic_numbers[self.src2]
 
         self.molecule = molecule
-
-        if not(molecule or train):
-            assert cell is not None
-            self.cell = cell
-        else:
-            self.cell = None
+        self.md = md
 
         self.ms1 = nn.Linear(in_feats, in_feats)
         self.silu = ShiftedSoftplus()
@@ -168,12 +162,7 @@ class TMDConv(nn.Module):
                 for n2 in [-1, 0, 1]:
                     for n3 in [-1, 0, 1]:
                         tmp = torch.tensor([n1, n2, n3]).float().to(x_i.device)
-
-                        if self.cell is not None:
-                            mirror_trans = tmp@self.cell
-                        else:
-                            mirror_trans = tmp@edges.src['cell']
-
+                        mirror_trans = tmp@edges.src['cell']
                         sub_r = torch.sqrt(((x_i - x_j - mirror_trans) ** 2).sum(dim=-1) + _eps)
                         r.append(sub_r)
                         vec.append(x_j - x_i + mirror_trans)
@@ -228,7 +217,11 @@ class TMDConv(nn.Module):
             norm2 = torch.sqrt((uv2 ** 2).sum(dim=-1) + _eps).unsqueeze(-1)
             return {'dv_': uv * avv.unsqueeze(-1), 'ds_': ((uv1 / norm1) * (uv2 / norm2)).sum(dim=-1) * asv + ass}
 
-    def forward(self, g, nv, ns):
+    def forward(self, g, nv, ns, cell=None):
+        if not(self.molecule or not self.md):
+            assert cell is not None
+            g.ndata['cell'] = cell.repeat(g.num_nodes(), 1, 1)
+
         g.ndata['v'] = nv
         g.ndata['s'] = ns
         g.update_all(self.message1, self.reduce1)
@@ -259,8 +252,8 @@ class HTNet(nn.Module):
         The probability of dropout
     """
     def __init__(self, elems: Union[str, List[str]], rc: float, l: int, 
-                 in_feats: int, molecule: bool=True, cell: Union[None, Tensor]=None, 
-                 intensive: bool=False, dropout: float=0.5, train: bool=True):
+                 in_feats: int, molecule: bool=True, intensive: bool=False, 
+                 dropout: float=0.5, md: bool=True):
         super(HTNet, self).__init__()
         etypes = []
         for etype in product(elems, repeat=3):
@@ -284,9 +277,8 @@ class HTNet(nn.Module):
                                l=l, 
                                in_feats=in_feats, 
                                molecule=molecule, 
-                               cell=cell, 
                                dropout=dropout, 
-                               train=train)
+                               md=md)
                 for etype in etypes
             }
         )
@@ -299,9 +291,8 @@ class HTNet(nn.Module):
                                l=l, 
                                in_feats=in_feats, 
                                molecule=molecule, 
-                               cell=cell, 
                                dropout=dropout, 
-                               train=train)
+                               train=md)
                 for etype in etypes
             }
         )
@@ -314,9 +305,8 @@ class HTNet(nn.Module):
                                l=l, 
                                in_feats=in_feats, 
                                molecule=molecule, 
-                               cell=cell, 
                                dropout=dropout, 
-                               train=train)
+                               train=md)
                 for etype in etypes
             }
         )
@@ -329,9 +319,8 @@ class HTNet(nn.Module):
                                l=l, 
                                in_feats=in_feats, 
                                molecule=molecule, 
-                               cell=cell, 
                                dropout=dropout, 
-                               train=train)
+                               train=md)
                 for etype in etypes
             }
         )
@@ -341,14 +330,14 @@ class HTNet(nn.Module):
                                 nn.Dropout(0.5), 
                                 nn.Linear(in_feats, 1))
 
-    def forward(self, g):
+    def forward(self, g, cell=None):
         s0 = self.embed(g.ndata['atomic_number'])
         v0 = torch.zeros((g.num_nodes(), self.in_feats_, 3)).to(g.device)
 
-        v1, s1 = self.hermconv1(g, v0, s0)
-        v2, s2 = self.hermconv2(g, v1, s1)
-        v3, s3 = self.hermconv3(g, v2, s2)
-        _, s4 = self.hermconv4(g, v3, s3)
+        v1, s1 = self.hermconv1(g, v0, s0, cell)
+        v2, s2 = self.hermconv2(g, v1, s1, cell)
+        v3, s3 = self.hermconv3(g, v2, s2, cell)
+        _, s4 = self.hermconv4(g, v3, s3, cell)
 
         s = self.pool(g, s4)
         pred_e = self.fc(s)
@@ -381,7 +370,7 @@ class HeteroVertexConv(nn.Module):
             if callable(set_allow_zero_in_degree_fn):
                 set_allow_zero_in_degree_fn(True)
 
-    def forward(self, g: DGLGraph, nv: Tensor, ns: Tensor):
+    def forward(self, g: DGLGraph, nv: Tensor, ns: Tensor, cell: Union[None, Tensor]=None):
         """Forward computation
         Invoke the forward function with each module.
 
@@ -407,7 +396,7 @@ class HeteroVertexConv(nn.Module):
             if rel_graph.number_of_edges() == 0:
                 continue
 
-            vrst, srst = self.mods[ntype](rel_graph, nv, ns)
+            vrst, srst = self.mods[ntype](rel_graph, nv, ns, cell)
             vrsts.append(vrst)
             srsts.append(srst)
 
@@ -435,8 +424,8 @@ class HVNet(nn.Module):
         The probability of dropout
     """
     def __init__(self, elems: Union[str, List[str]], rc: float, l: int, 
-                 in_feats: int, molecule: bool=True, cell: Union[None, Tensor]=None, 
-                 intensive: bool=False, dropout: float=0.5, train: bool=True):
+                 in_feats: int, molecule: bool=True, intensive: bool=False, 
+                 dropout: float=0.5, md: bool=True):
         super(HVNet, self).__init__()
         self.in_feats_ = in_feats
         if intensive:
@@ -450,9 +439,8 @@ class HVNet(nn.Module):
                                 l=l, 
                                 in_feats=in_feats, 
                                 molecule=molecule, 
-                                cell=cell, 
                                 dropout=dropout, 
-                                train=train)
+                                md=md)
                   for ntype in elems}, 
         )
 
@@ -461,9 +449,8 @@ class HVNet(nn.Module):
                                 l=l, 
                                 in_feats=in_feats, 
                                 molecule=molecule, 
-                                cell=cell, 
                                 dropout=dropout, 
-                                train=train)
+                                md=md)
                   for ntype in elems}, 
         )
 
@@ -472,9 +459,8 @@ class HVNet(nn.Module):
                                 l=l, 
                                 in_feats=in_feats, 
                                 molecule=molecule, 
-                                cell=cell, 
                                 dropout=dropout, 
-                                train=train)
+                                md=md)
                   for ntype in elems}, 
         )
         
@@ -483,9 +469,8 @@ class HVNet(nn.Module):
                                 l=l, 
                                 in_feats=in_feats, 
                                 molecule=molecule, 
-                                cell=cell, 
                                 dropout=dropout, 
-                                train=train)
+                                md=md)
                   for ntype in elems}, 
         )
 
@@ -494,14 +479,14 @@ class HVNet(nn.Module):
                                 nn.Dropout(0.5), 
                                 nn.Linear(in_feats, 1))
 
-    def forward(self, g):
+    def forward(self, g, cell=None):
         s0 = self.embed(g.ndata['atomic_number'])
         v0 = torch.zeros((g.num_nodes(), self.in_feats_, 3)).to(g.device)
 
-        v1, s1 = self.hermconv1(g, v0, s0)
-        v2, s2 = self.hermconv2(g, v1, s1)
-        v3, s3 = self.hermconv3(g, v2, s2)
-        _, s4 = self.hermconv4(g, v3, s3)
+        v1, s1 = self.hermconv1(g, v0, s0, cell)
+        v2, s2 = self.hermconv2(g, v1, s1, cell)
+        v3, s3 = self.hermconv3(g, v2, s2, cell)
+        _, s4 = self.hermconv4(g, v3, s3, cell)
 
         s = self.pool(g, s4)
         pred_e = self.fc(s)

@@ -79,17 +79,12 @@ class RMConv(nn.Module):
     dropout     : float
         The probability of dropout
     """
-    def __init__(self, rc: float, l: int, in_feats: int, molecule: bool=True, 
-                 cell: Union[None, Tensor]=None, dropout=0.5, train=True):
+    def __init__(self, rc: float, l: int, in_feats: int, 
+                 molecule: bool=True, dropout=0.5, md=False):
         super(RMConv, self).__init__()
         self.molecule = molecule
-
-        if not(molecule or train):
-            assert cell is not None
-            self.cell = cell
-        else:
-            self.cell = None
-
+        self.md = md
+        
         self.ms1 = nn.Linear(in_feats, in_feats)
         self.silu = ShiftedSoftplus()
         self.ms2 = nn.Linear(in_feats, in_feats * 3)
@@ -115,11 +110,7 @@ class RMConv(nn.Module):
                 for n2 in [-1, 0, 1]:
                     for n3 in [-1, 0, 1]:
                         tmp = torch.tensor([n1, n2, n3]).float().to(x_i.device)
-                        if self.cell is not None:
-                            mirror_trans = tmp@self.cell
-                        else:
-                            mirror_trans = tmp@edges.src['cell']
-                        
+                        mirror_trans = tmp@edges.src['cell']
                         sub_r = torch.sqrt(((x_j - x_i + mirror_trans) ** 2).sum(dim=-1) + _eps)
                         r.append(sub_r)
                         vec.append(x_j - x_i + mirror_trans)
@@ -153,7 +144,11 @@ class RMConv(nn.Module):
         avv, asv, ass = torch.chunk(s_, 3, dim=-1)
         return {'dv_': uv * avv.unsqueeze(-1), 'ds_': ((uv / norm) ** 2).sum(dim=-1) * asv + ass}
 
-    def forward(self, g, nv, ns):
+    def forward(self, g, nv, ns, cell=None):
+        if not(self.molecule or not self.md):
+            assert cell is not None
+            g.ndata['cell'] = cell.repeat(g.num_nodes(), 1, 1)
+
         g.ndata['v'] = nv
         g.ndata['s'] = ns
         g.update_all(self.message1, self.reduce1)
