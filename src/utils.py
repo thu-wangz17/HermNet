@@ -53,13 +53,13 @@ def virial_calc(cell, pos, forces, energy, units='metal', pbc=False):
     else:
         raise ValueError('Illegal units command')
 
-    volume = torch.det(cell)
-
     if pbc:
         assert cell.requires_grad
-        return torch.autograd.grad(energy, cell, grad_outputs=None) * nktv2p / volume
+        
+        volume = torch.det(cell)
+        return - 3 * volume * torch.autograd.grad(energy, cell) * nktv2p
     else:
-        return torch.einsum('ij, ik->jk', pos, forces) * nktv2p / volume
+        return torch.einsum('ij, ik->jk', pos, forces) * nktv2p
 
 
 def _collate(samples):

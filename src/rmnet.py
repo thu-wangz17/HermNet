@@ -1,6 +1,7 @@
 import torch
 from torch import nn, Tensor
 import math
+from typing import Union
 from dgl.nn.pytorch.conv.cfconv import ShiftedSoftplus
 
 _eps = 1e-5
@@ -78,10 +79,16 @@ class RMConv(nn.Module):
     dropout     : float
         The probability of dropout
     """
-    def __init__(self, rc: float, l: int, in_feats: int, 
-                 molecule: bool=True, dropout=0.5):
+    def __init__(self, rc: float, l: int, in_feats: int, molecule: bool=True, 
+                 cell: Union[None, Tensor]=None, dropout=0.5, train=True):
         super(RMConv, self).__init__()
         self.molecule = molecule
+
+        if not(molecule or train):
+            assert cell is not None
+            self.cell = cell
+        else:
+            self.cell = None
 
         self.ms1 = nn.Linear(in_feats, in_feats)
         self.silu = ShiftedSoftplus()
@@ -108,7 +115,11 @@ class RMConv(nn.Module):
                 for n2 in [-1, 0, 1]:
                     for n3 in [-1, 0, 1]:
                         tmp = torch.tensor([n1, n2, n3]).float().to(x_i.device)
-                        mirror_trans = tmp@edges.src['cell']
+                        if self.cell is not None:
+                            mirror_trans = tmp@self.cell
+                        else:
+                            mirror_trans = tmp@edges.src['cell']
+                        
                         sub_r = torch.sqrt(((x_j - x_i + mirror_trans) ** 2).sum(dim=-1) + _eps)
                         r.append(sub_r)
                         vec.append(x_j - x_i + mirror_trans)

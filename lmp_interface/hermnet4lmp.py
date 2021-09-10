@@ -22,16 +22,21 @@ def build_graph(cell, elements, pos, rc):
     return g
 
 
-def calculator(g, model_path, trn_mean, device, pbc, units, 
-               elems, rc, l, in_feats, ensemble='NVT', 
+def calculator(g, cell, model_path, trn_mean, device, pbc, 
+               units, elems, rc, l, in_feats, ensemble='NVT', 
                uncert=False, shreshold=None, nums=100):
     device = torch.device(device)
 
     g = g.to(device)
     g.ndata['x'].requires_grad = True
 
-    model = HVNet(elems, rc, l, in_feats, molecule=not(pbc), 
-                  intensive=False, dropout=0.0).to(device)
+    cell = torch.from_numpy(cell).float().to(device)
+
+    if ensemble.lower() == 'npt' and pbc:
+        cell.requires_grad = True
+
+    model = HVNet(elems, rc, l, in_feats, molecule=not(pbc), cell=cell, 
+                  intensive=False, dropout=0.0, train=False).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
 
@@ -47,16 +52,12 @@ def calculator(g, model_path, trn_mean, device, pbc, units,
 
     if ensemble.lower() == 'npt':
         if pbc:
-            g.ndata['cell'].requires_grad = True
+            cell.requires_grad = True
 
         virial = virial_calc(
-            cell=g.ndata['cell'], 
-            pos=g.ndata['x'], 
-            forces=forces, 
-            energy=energy, 
-            units=units, 
-            pbc=pbc
-        ).detach().cpu().numpy()
+            cell=cell, pos=g.ndata['x'], forces=forces, 
+            energy=energy, units=units, pbc=pbc
+        )[0].detach().cpu().numpy()
     else:
         virial = np.array([0., 0., 0., 0., 0., 0.], dtype=np.float32)
 
@@ -69,8 +70,8 @@ def calculator(g, model_path, trn_mean, device, pbc, units,
         for _ in tqdm(range(nums), ncols=80, ascii=True, desc='MCDropout'):
             bagging_energies.append(model(g).detach().cpu().item())
 
-        uncertainty = np.array(bagging_energies).std()
-        print('The energy uncertainty of current configuration = {:.3f}.'.format(uncertainty))
+        uncertainty = np.array(bagging_energies).std() / g.num_nodes() * 1000
+        print('The energy uncertainty of current configuration = {:.3f} meV.'.format(uncertainty))
         if uncertainty > shreshold:
             warnings.warn('Uncertainty is larger than shreshold {:.3f}.'
                 'Keep simulating maybe dangerous.'
@@ -207,7 +208,7 @@ if __name__ == '__main__':
 
         g = build_graph(cell=cell, elements=elements, pos=pos, rc=args.radius)
         energy, forces, virial = calculator(
-            g=g, model_path=args.model, trn_mean=args.stats, device=args.device, 
+            g=g, cell=cell, model_path=args.model, trn_mean=args.stats, device=args.device, 
             pbc=eval(args.periodic), units=args.units, elems=args.elems, rc=args.radius, 
             l=args.l, in_feats=args.infeats, ensemble=args.ensemble, 
             uncert=eval(args.uncertain), shreshold=args.shreshold, nums=args.bags

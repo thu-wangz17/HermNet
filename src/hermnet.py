@@ -129,12 +129,19 @@ class TMDConv(nn.Module):
         Molecules or crystals
     """
     def __init__(self, etype: str, rc: float, l: int, in_feats: int, 
-                 molecule: bool=True, dropout=0.5):
+                 molecule: bool=True, cell: Union[None, Tensor]=None, 
+                 dropout: float=0.5, train: bool=True):
         super(TMDConv, self).__init__()
         self.src1, _, self.src2 = etype.split('-')
         self.mask1, self.mask2 = atomic_numbers[self.src1], atomic_numbers[self.src2]
 
         self.molecule = molecule
+
+        if not(molecule or train):
+            assert cell is not None
+            self.cell = cell
+        else:
+            self.cell = None
 
         self.ms1 = nn.Linear(in_feats, in_feats)
         self.silu = ShiftedSoftplus()
@@ -161,7 +168,12 @@ class TMDConv(nn.Module):
                 for n2 in [-1, 0, 1]:
                     for n3 in [-1, 0, 1]:
                         tmp = torch.tensor([n1, n2, n3]).float().to(x_i.device)
-                        mirror_trans = tmp@edges.src['cell']
+
+                        if self.cell is not None:
+                            mirror_trans = tmp@self.cell
+                        else:
+                            mirror_trans = tmp@edges.src['cell']
+
                         sub_r = torch.sqrt(((x_i - x_j - mirror_trans) ** 2).sum(dim=-1) + _eps)
                         r.append(sub_r)
                         vec.append(x_j - x_i + mirror_trans)
@@ -247,8 +259,8 @@ class HTNet(nn.Module):
         The probability of dropout
     """
     def __init__(self, elems: Union[str, List[str]], rc: float, l: int, 
-                 in_feats: int, molecule: bool=True, 
-                 intensive: bool=False, dropout=0.5):
+                 in_feats: int, molecule: bool=True, cell: Union[None, Tensor]=None, 
+                 intensive: bool=False, dropout: float=0.5, train: bool=True):
         super(HTNet, self).__init__()
         etypes = []
         for etype in product(elems, repeat=3):
@@ -272,7 +284,9 @@ class HTNet(nn.Module):
                                l=l, 
                                in_feats=in_feats, 
                                molecule=molecule, 
-                               dropout=dropout)
+                               cell=cell, 
+                               dropout=dropout, 
+                               train=train)
                 for etype in etypes
             }
         )
@@ -285,7 +299,9 @@ class HTNet(nn.Module):
                                l=l, 
                                in_feats=in_feats, 
                                molecule=molecule, 
-                               dropout=dropout)
+                               cell=cell, 
+                               dropout=dropout, 
+                               train=train)
                 for etype in etypes
             }
         )
@@ -298,7 +314,9 @@ class HTNet(nn.Module):
                                l=l, 
                                in_feats=in_feats, 
                                molecule=molecule, 
-                               dropout=dropout)
+                               cell=cell, 
+                               dropout=dropout, 
+                               train=train)
                 for etype in etypes
             }
         )
@@ -311,7 +329,9 @@ class HTNet(nn.Module):
                                l=l, 
                                in_feats=in_feats, 
                                molecule=molecule, 
-                               dropout=dropout)
+                               cell=cell, 
+                               dropout=dropout, 
+                               train=train)
                 for etype in etypes
             }
         )
@@ -415,8 +435,8 @@ class HVNet(nn.Module):
         The probability of dropout
     """
     def __init__(self, elems: Union[str, List[str]], rc: float, l: int, 
-                 in_feats: int, molecule: bool=True, 
-                 intensive: bool=False, dropout=0.5):
+                 in_feats: int, molecule: bool=True, cell: Union[None, Tensor]=None, 
+                 intensive: bool=False, dropout: float=0.5, train: bool=True):
         super(HVNet, self).__init__()
         self.in_feats_ = in_feats
         if intensive:
@@ -430,7 +450,9 @@ class HVNet(nn.Module):
                                 l=l, 
                                 in_feats=in_feats, 
                                 molecule=molecule, 
-                                dropout=dropout)
+                                cell=cell, 
+                                dropout=dropout, 
+                                train=train)
                   for ntype in elems}, 
         )
 
@@ -439,7 +461,9 @@ class HVNet(nn.Module):
                                 l=l, 
                                 in_feats=in_feats, 
                                 molecule=molecule, 
-                                dropout=dropout)
+                                cell=cell, 
+                                dropout=dropout, 
+                                train=train)
                   for ntype in elems}, 
         )
 
@@ -448,7 +472,9 @@ class HVNet(nn.Module):
                                 l=l, 
                                 in_feats=in_feats, 
                                 molecule=molecule, 
-                                dropout=dropout)
+                                cell=cell, 
+                                dropout=dropout, 
+                                train=train)
                   for ntype in elems}, 
         )
         
@@ -457,7 +483,9 @@ class HVNet(nn.Module):
                                 l=l, 
                                 in_feats=in_feats, 
                                 molecule=molecule, 
-                                dropout=dropout)
+                                cell=cell, 
+                                dropout=dropout, 
+                                train=train)
                   for ntype in elems}, 
         )
 
