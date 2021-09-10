@@ -696,7 +696,7 @@ class DeePMDDataset(BaseDataset):
                                 if len(self.train_idx) > 0:
                                     self.train_idx += list(range(self.train_idx[-1] + 1, self.train_idx[-1] + 1 + pos.shape[0]))
                                 else:
-                                    self.train_idx += list(pos.shape[0]))
+                                    self.train_idx += list(pos.shape[0])
 
                         for idx in tqdm(range(pos.shape[0]), ncols=80, ascii=True, desc='Processing {}/set.00{}'.format(i, j)):
                             u, v = neighbors(cell=cell[idx], 
