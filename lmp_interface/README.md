@@ -18,3 +18,8 @@ The protocol for using LAMMPS as a client is to use these 3 commands in this ord
     > Running the following two commands in seperate windows:
       `mpirun -np 1 lmp -v mode file -in in.message.client` and
       `python hermnet4lmp.py -m="file" -d cuda -f 'CH.pt' -r 5.  -s 100.`
+* If the error `OSError: Could not load CSlib dynamic library` is raised during the simulation, it could be solved by adding the following two lines in `.bashrc`:
+  ```
+  export PATH=${lammps_dir}/lib/message/cslib/src/:$PATH
+  export LD_LIBRARY_PATH=${lammps_dir}/lib/message/cslib/src/:$LD_LIBRARY_PATH
+  ```
