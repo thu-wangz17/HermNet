@@ -5,6 +5,7 @@ import numpy as np
 import dgl
 import torch
 from tqdm import tqdm
+from ase.data import atomic_numbers
 import argparse
 import warnings
 from cslib import CSlib
@@ -41,11 +42,11 @@ def calculator(g, cell, model, trn_mean, device, pbc, units,
     if pbc:
         forces = - torch.autograd.grad(
             energy.sum(), g.ndata['x'], retain_graph=True
-        )[0].detach().cpu().view(-1).numpy()
+        )[0]
     else:
         forces = - torch.autograd.grad(
             energy.sum(), g.ndata['x']
-        )[0].detach().cpu().view(-1).numpy()
+        )[0]
 
     if ensemble.lower() == 'npt':
         if pbc:
@@ -77,7 +78,7 @@ def calculator(g, cell, model, trn_mean, device, pbc, units,
                 'Keep simulating maybe dangerous. '
                     'Suggest training the model with more related data')
 
-    return energy.detach().cpu().item(), forces, virial
+    return energy.detach().cpu().item(), forces.detach().cpu().view(-1).numpy(), virial
 
 
 if __name__ == '__main__':
@@ -108,7 +109,10 @@ if __name__ == '__main__':
         '-c', '--periodic', help='If the system is PBC or not', type=str, required=True
     )
     parser.add_argument('-u', '--units', help='Units', type=str, default='metal')
-    parser.add_argument('-t', '--elems', help='Elements', type=str, nargs='*', required=True)
+    parser.add_argument(
+        '-t', '--elems', help='Elements. The order should be the same with data file', 
+        type=str, nargs='*', required=True
+    )
     parser.add_argument('-l', help='l', type=int, default=30)
     parser.add_argument('-i', '--infeats', help='In_feats', type=int, default=128)
     parser.add_argument('-e', '--ensemble', help='Ensemble', type=str, default='NVT')
@@ -213,6 +217,10 @@ if __name__ == '__main__':
 
         elements = np.array(types)
         pos = np.array(coords).reshape(natoms, 3)
+
+        num_elems = len(args.elems)
+        for i in range(num_elems):
+            elements[elements == (i + 1)] = atomic_numbers[args.elems[i]]
 
         g = build_graph(cell=cell, elements=elements, pos=pos, rc=args.radius)
         energy, forces, virial = calculator(
