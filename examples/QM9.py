@@ -10,7 +10,7 @@ from dgl.data.utils import split_dataset
 from time import time
 from tqdm import tqdm
 from hermnet.data import QM9Dataset
-from hermnet.hvnet import HVNet
+from hermnet.hermnet import HVNet
 from hermnet.utils import _collate_QM9
 
 if __name__ == '__main__':

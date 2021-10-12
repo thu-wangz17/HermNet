@@ -8,8 +8,8 @@ from tqdm import tqdm
 import numpy as np
 from operator import itemgetter
 from itertools import groupby
-from hermnet.data import DeepMDDataset
-from hermnet.hvnet import HVNet
+from hermnet.data import DeePMDDataset
+from hermnet.hermnet import HVNet
 from hermnet.utils import _collate
 
 if __name__ == '__main__':
@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     print('Processing/Loading Data ...')
     t0 = time()
-    dataset = DeepMDDataset(rc=rc, name='Pt_surface', raw_dir='./Pt_surf_001', save_dir='./processed')
+    dataset = DeePMDDataset(rc=rc, name='Pt_surface', raw_dir='./Pt_surf_001', save_dir='./processed')
     print('Done in {:.2f}s'.format(time()-t0))
 
     print('Stats : Mean={:.3f} eV | Std={:.3f} eV'.format(dataset.energy_mean(), 
