@@ -10,11 +10,12 @@ The protocol for using LAMMPS as a client is to use these 3 commands in this ord
 **Note:** To use `client/server` mode, the package `PYTHON` and [`MESSAGE`](https://lammps.sandia.gov/doc/Build_extras.html#message) which includes support for messaging via sockets should be installed.
 
 ***Tips:***
-* Make sure [`PYTHON`](https://lammps.sandia.gov/doc/Build_extras.html#python-package) and [`MESSAGE`](https://lammps.sandia.gov/doc/Build_extras.html#message) packages have been installed in `LAMMPS`. An example for compiling `LAMMPS` with `cmake`: `cmake -D PKG_PYTHON=yes -D PKG_MESSAGE=yes  -D PKG_GPU=on -D GPU_API=cuda  -D GPU_ARCH=sm_70 -D CUDPP_OPT=yes -D USE_STATIC_OPENCL_LOADER=no -D PKG_MANYBODY=on -D BUILD_MPI=yes -D PKG_USER-PHONON=yes -D PKG_KOKKOS=yes ../cmake/ & make -jN & make install`.
+* Make sure [`PYTHON`](https://lammps.sandia.gov/doc/Build_extras.html#python-package) and [`MESSAGE`](https://lammps.sandia.gov/doc/Build_extras.html#message) packages have been installed in `LAMMPS`. An example for compiling `LAMMPS` with `cmake`: `cmake -D PKG_PYTHON=yes -D PKG_MESSAGE=yes  -D PKG_GPU=on -D GPU_API=cuda  -D GPU_ARCH=sm_70 -D CUDPP_OPT=yes -D USE_STATIC_OPENCL_LOADER=no -D PKG_MANYBODY=on -D BUILD_MPI=yes -D PKG_KSPACE=yes -D PKG_USER-PHONON=yes -D PKG_KOKKOS=yes ../cmake/ & make -jN & make install`.
   * `-D PKG_PYTHON=yes`: Allow Python interface. Recommand using `Anaconda`.
   * `-D PKG_MESSAGE=yes`: Allow Client/Sever interface.
   * `-D PKG_GPU=on`: Accelerate `LAMMPS` with GPU.
   * `PKG_KOKKOS=yes`: Accelerate `LAMMPS` with GPU. [The original `USER-CUDA` has been removed.](https://docs.lammps.org/Commands_removed.html) Significant parts of the design were transferred to the [KOKKOS](https://docs.lammps.org/Speed_kokkos.html) package.
+  * `-D PKG_KSPACE=yes`: The package is required by `USER-PHONON`.
   * `-D PKG_USER-PHONON=yes`: Allow `fix phonon` command to compute properties of phonons.
   * `-D PKG_MANYBODY=on`: Allow more `pair_style` to be use.
 * An example for coupling `LAMMPS` and `HermNet`:
