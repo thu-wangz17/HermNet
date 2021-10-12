@@ -41,8 +41,7 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     model = HVNet(elems=['Al', 'Co', 'Cr', 'Cu', 'Fe', 'Ni'], rc=rc, l=30, 
-                  in_feats=128, molecule=False, 
-                  cell=torch.from_numpy(dataset.cell).float().to(device)).to(device)
+                  in_feats=128, molecule=False, md=False).to(device)
     print(model)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=3e-5, weight_decay=1e-5)
@@ -61,7 +60,7 @@ if __name__ == '__main__':
             g, e, f = g.to(device), e.unsqueeze(-1).to(device), f.to(device)
             g.ndata['x'].requires_grad = True
 
-            pred_e = model(g)
+            pred_e = model(g, g.ndata['cell'])
             e_loss_ = criterion(pred_e, e - trn_mean)
             
             pred_f = - torch.autograd.grad(pred_e.sum(), 
@@ -82,7 +81,7 @@ if __name__ == '__main__':
             val_g, val_e, val_f = val_g.to(device), val_e.unsqueeze(-1).to(device), val_f.to(device)
             val_g.ndata['x'].requires_grad = True
 
-            pred_val_e = model(val_g)
+            pred_val_e = model(val_g, val_g.ndata['cell'])
             val_loss_e += criterion(pred_val_e, val_e - trn_mean)
 
             pred_val_f = - torch.autograd.grad(pred_val_e.sum(), 

@@ -43,7 +43,7 @@ if __name__ == '__main__':
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    model = HVNet(elems=['H', 'C', 'N', 'O', 'F'], rc=5., l=30, in_feats=128, molecule=True).to(device)
+    model = HVNet(elems=['H', 'C', 'N', 'O', 'F'], rc=5., l=30, in_feats=128, molecule=True, md=False).to(device)
     print(model)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=3e-5, weight_decay=1e-5)

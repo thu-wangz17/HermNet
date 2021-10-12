@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    model = HVNet(elems=['Pt'], rc=rc, l=30, in_feats=128, molecule=False).to(device)
+    model = HVNet(elems=['Pt'], rc=rc, l=30, in_feats=128, molecule=False, md=False).to(device)
     model.load_state_dict(torch.load('./Pt_surf.pt'))
     print(model)
 
@@ -56,7 +56,7 @@ if __name__ == '__main__':
             test_g, test_e, test_f = test_g.to(device), test_e.unsqueeze(-1).to(device), test_f.to(device)
             test_g.ndata['x'].requires_grad = True
 
-            pred_test_e = model(test_g)
+            pred_test_e = model(test_g, test_g.ndata['cell'])
             test_loss_e += evalution(pred_test_e, test_e - trn_mean)
 
             pred_test_f = - torch.autograd.grad(pred_test_e.sum(), 
