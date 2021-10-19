@@ -21,7 +21,7 @@ The protocol for using LAMMPS as a client is to use these 3 commands in this ord
 * An example for coupling `LAMMPS` and `HermNet`:
     > Running the following two commands in seperate windows:
       `mpirun -np 1 lmp -v mode file -in in.message.client` and
-      `python hermnet4lmp.py -m="file" -d cuda -f 'CH.pt' -r 5.  -s 100.`
+      `python hermnet4lmp.py -m file -d cuda -f CH.pt -r 5.  -s 100. -c True -t C H`
 * HermNet could return uncertainty during the simulation. The details could refer [the paper](https://arxiv.org/abs/1506.02142).
 * If the error `OSError: Could not load CSlib dynamic library` is raised during the simulation, it could be solved by adding the following two lines in `.bashrc`:
   ```
