@@ -13,4 +13,4 @@ setup(name='HermNet',
                         'dgl>=0.6.0.post1', 
                         'pymatgen>=2020.4.2', 
                         'rdkit>=2009.Q1-1',  # Recommend instakk rdkit with conda
-                        'scikit_learn>=0.24.2'] )
+                        'scikit_learn>=0.24.2'])
