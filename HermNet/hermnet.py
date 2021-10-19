@@ -7,7 +7,7 @@ from dgl.nn.pytorch.conv.cfconv import ShiftedSoftplus
 from itertools import product
 from typing import Union, Tuple, List, Dict
 from ase.data import atomic_numbers
-from rmnet import RBF, cosine_cutoff, RMConv
+from .rmnet import RBF, cosine_cutoff, RMConv
 
 _eps = 1e-5
 

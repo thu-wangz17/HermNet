@@ -1,7 +1,6 @@
 import torch
 from torch import nn, Tensor
 import math
-from typing import Union
 from dgl.nn.pytorch.conv.cfconv import ShiftedSoftplus
 
 _eps = 1e-5

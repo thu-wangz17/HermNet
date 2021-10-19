@@ -9,9 +9,12 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 from ase.data import atomic_numbers
+from ase.geometry import wrap_positions
 from pymatgen.core.structure import IMolecule
 import re
-from utils import neighbors
+
+from tqdm.std import trange
+from .utils import neighbors
 
 class BaseDataset(DGLDataset):
     """Base class for trajectories from molecular dynamics.
@@ -139,7 +142,14 @@ class VASPDataset(BaseDataset):
         from ase.io.vasp import read_vasp_xml
 
         vasprun = read_vasp_xml(self.file_, index=slice(0, None))
-        trajs = [traj for traj in vasprun]
+        trajs = []
+        for traj in vasprun:
+            if traj.pbc:
+                traj.wrap()
+                trajs.append(traj)
+            else:
+                trajs.append(traj)
+
         return trajs
 
 
@@ -158,7 +168,15 @@ class ASEDataset(BaseDataset):
     def read_info(self):
         from ase.io.trajectory import TrajectoryReader
 
-        trajs = TrajectoryReader(self.file_)
+        original_trajs = TrajectoryReader(self.file_)
+        trajs = []
+        for traj in original_trajs:
+            if traj.pbc:
+                traj.wrap()
+                trajs.append(traj)
+            else:
+                trajs.append(traj)
+
         return trajs
         
         
@@ -220,6 +238,7 @@ class LAMMPSDataset(BaseDataset):
         for i in tqdm(range(len(self.trajs)), ncols=80, ascii=True, desc='Process Lammps data'):
             cell = self.trajs[i].todict()['cell']
             atoms = self.trajs[i]
+            atoms.wrap()
             u, v = neighbors(cell=cell, coord0=atoms.positions, 
                              coord1=atoms.positions, rc=self.rc)
             non_self_edges_idx = u != v
@@ -572,7 +591,8 @@ class DeePMDDataset(BaseDataset):
                     u, v = u[non_self_edges_idx], v[non_self_edges_idx]
 
                     g = dgl.graph((u, v))
-                    g.ndata['x'] = torch.from_numpy(pos[idx].reshape(-1, 3)).float()
+                    pos_ = wrap_positions(positions=pos[idx].reshape(-1, 3), cell=cell[idx])
+                    g.ndata['x'] = torch.from_numpy(pos_).float()
                     g.ndata['atomic_number'] = torch.tensor(atomics_num).long()
                     g.ndata['forces'] = torch.from_numpy(forces[idx].reshape(-1, 3)).float()
                     g.ndata['cell'] = torch.from_numpy(np.tile(cell[idx], (g.num_nodes(), 1, 1))).float()
