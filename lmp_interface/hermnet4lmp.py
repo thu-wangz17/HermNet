@@ -9,8 +9,8 @@ from ase.data import atomic_numbers
 import argparse
 import warnings
 from cslib import CSlib
-from hermnet.utils import neighbors, virial_calc
-from hermnet.hermnet import HVNet
+from Hermnet.utils import neighbors, virial_calc
+from Hermnet.hermnet import HVNet
 
 def build_graph(cell, elements, pos, rc):
     u, v = neighbors(cell=cell, coord0=pos, coord1=pos, rc=rc)
