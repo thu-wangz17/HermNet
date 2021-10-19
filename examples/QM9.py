@@ -9,9 +9,9 @@ from torch.utils.data import DataLoader
 from dgl.data.utils import split_dataset
 from time import time
 from tqdm import tqdm
-from hermnet.data import QM9Dataset
-from hermnet.hermnet import HVNet
-from hermnet.utils import _collate_QM9
+from HermNet.data import QM9Dataset
+from HermNet.hermnet import HVNet
+from HermNet.utils import _collate_QM9
 
 if __name__ == '__main__':
     rc = 5.0

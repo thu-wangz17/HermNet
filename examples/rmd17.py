@@ -3,8 +3,8 @@
 import torch
 from torch.utils.data import DataLoader, Subset
 from time import time
-from hermnet.data import rMD17Dataset
-from hermnet.utils import _collate
+from HermNet.data import rMD17Dataset
+from HermNet.utils import _collate
 
 if __name__ == '__main__':
     rc = 5.0

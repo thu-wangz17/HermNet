@@ -8,9 +8,9 @@ from tqdm import tqdm
 import numpy as np
 from operator import itemgetter
 from itertools import groupby
-from hermnet.data import DeePMDDataset
-from hermnet.hermnet import HVNet
-from hermnet.utils import _collate
+from HermNet.data import DeePMDDataset
+from HermNet.hermnet import HVNet
+from HermNet.utils import _collate
 
 if __name__ == '__main__':
     rc = 5.0
