@@ -1,16 +1,50 @@
+import sys
 from setuptools import setup, find_packages
 
-setup(name='HermNet', 
-      version='0.1.0', 
-      description='Heterogeneous relational message passing networks', 
-      author='wangz', 
-      author_email='wz17.thu@gmail.com', 
-      packages=find_packages(), 
-      install_requires=['ase', 
-                        'tqdm', 
-                        'torch>=1.8.1', 
-                        'numpy>=1.16.4', 
-                        'dgl>=0.6.0.post1', 
-                        'pymatgen>=2020.4.2', 
-                        'rdkit>=2009.Q1-1',  # Recommend instakk rdkit with conda
-                        'scikit_learn>=0.24.2'])
+def setup_(version):
+    assert version in ['cpu', 'cu101', 'cu102', 'cu110', 'cu111']
+
+    # cpu
+    if version == 'cpu':
+        required_packs = ['ase', 'tqdm', 'numpy>=1.16.4', 
+                          'pymatgen>=2020.4.2', 'scikit_learn>=0.24.1', 
+                          'torch>=1.7.1', 'dgl>=0.6.0.post1']
+    # cuda 10.1
+    if version == 'cu101':
+        required_packs = ['ase', 'tqdm', 'numpy>=1.16.4', 
+                          'pymatgen>=2020.4.2', 'scikit_learn>=0.24.1', 
+                          'torch==1.7.1+cu101', 'dgl-cu101']
+    # cuda 10.2
+    if version == 'cu102':
+        required_packs = ['ase', 'tqdm', 'numpy>=1.16.4', 
+                          'pymatgen>=2020.4.2', 'scikit_learn>=0.24.1', 
+                          'torch==1.9.1+cu102', 'dgl-cu102']
+    # cuda 11.0
+    if version == 'cu110':
+        required_packs = ['ase', 'tqdm', 'numpy>=1.16.4', 
+                          'pymatgen>=2020.4.2', 'scikit_learn>=0.24.1', 
+                          'torch==1.7.1+cu110', 'dgl-cu110']
+    # cuda 11.1
+    if version == 'cu111':
+        required_packs = ['ase', 'tqdm', 'numpy>=1.16.4', 
+                          'pymatgen>=2020.4.2', 'scikit_learn>=0.24.1', 
+                          'torch==1.9.1+cu111', 'dgl-cu111']
+
+    if version == 'cpu':
+        version = ''
+    else:
+        version = '-' + version
+
+    setup(name='HermNet' + version, 
+          version='0.1.0', 
+          description='Heterogeneous relational message passing networks', 
+          author='wangz', 
+          author_email='wz17.thu@gmail.com', 
+          packages=find_packages(), 
+          install_requires=required_packs)
+
+if __name__ == '__main__':
+    idx = sys.argv.index('-v')
+    sys.argv.pop(idx)
+    version = sys.argv.pop(idx)
+    setup_(version)
