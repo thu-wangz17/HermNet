@@ -12,8 +12,6 @@ from ase.data import atomic_numbers
 from ase.geometry import wrap_positions
 from pymatgen.core.structure import IMolecule
 import re
-
-from tqdm.std import trange
 from .utils import neighbors
 
 class BaseDataset(DGLDataset):
