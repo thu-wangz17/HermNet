@@ -637,7 +637,8 @@ class DeePMDDataset(BaseDataset):
                             u, v = u[non_self_edges_idx], v[non_self_edges_idx]
 
                             g = dgl.graph((u, v))
-                            g.ndata['x'] = torch.from_numpy(pos[idx].reshape(-1, 3)).float()
+                            pos_ = wrap_positions(positions=pos[idx].reshape(-1, 3), cell=cell[idx])
+                            g.ndata['x'] = torch.from_numpy(pos_).float()
                             g.ndata['atomic_number'] = torch.tensor(atomics_num).long()
                             g.ndata['forces'] = torch.from_numpy(forces[idx].reshape(-1, 3)).float()
                             g.ndata['cell'] = torch.from_numpy(np.tile(cell[idx], (g.num_nodes(), 1, 1))).float()
@@ -673,7 +674,8 @@ class DeePMDDataset(BaseDataset):
                             u, v = u[non_self_edges_idx], v[non_self_edges_idx]
         
                             g = dgl.graph((u, v))
-                            g.ndata['x'] = torch.from_numpy(pos[idx].reshape(-1, 3)).float()
+                            pos_ = wrap_positions(positions=pos[idx].reshape(-1, 3), cell=cell[idx])
+                            g.ndata['x'] = torch.from_numpy(pos_).float()
                             g.ndata['atomic_number'] = torch.tensor(atomics_num).long()
                             g.ndata['forces'] = torch.from_numpy(forces[idx].reshape(-1, 3)).float()
                             g.ndata['cell'] = torch.from_numpy(np.tile(cell[idx], (g.num_nodes(), 1, 1))).float()
@@ -725,7 +727,8 @@ class DeePMDDataset(BaseDataset):
                             u, v = u[non_self_edges_idx], v[non_self_edges_idx]
 
                             g = dgl.graph((u, v))
-                            g.ndata['x'] = torch.from_numpy(pos[idx].reshape(-1, 3)).float()
+                            pos_ = wrap_positions(positions=pos[idx].reshape(-1, 3), cell=cell[idx])
+                            g.ndata['x'] = torch.from_numpy(pos_).float()
                             g.ndata['atomic_number'] = torch.tensor(atomics_num).long()
                             g.ndata['forces'] = torch.from_numpy(forces[idx].reshape(-1, 3)).float()
                             g.ndata['cell'] = torch.from_numpy(np.tile(cell[idx], (g.num_nodes(), 1, 1))).float()
@@ -773,7 +776,8 @@ class DeePMDDataset(BaseDataset):
                             u, v = u[non_self_edges_idx], v[non_self_edges_idx]
 
                             g = dgl.graph((u, v))
-                            g.ndata['x'] = torch.from_numpy(pos[idx].reshape(-1, 3)).float()
+                            pos_ = wrap_positions(positions=pos[idx].reshape(-1, 3), cell=cell[idx])
+                            g.ndata['x'] = torch.from_numpy(pos_).float()
                             g.ndata['atomic_number'] = torch.tensor(atomics_num).long()
                             g.ndata['forces'] = torch.from_numpy(forces[idx].reshape(-1, 3)).float()
                             g.ndata['cell'] = torch.from_numpy(np.tile(cell[idx], (g.num_nodes(), 1, 1))).float()
