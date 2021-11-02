@@ -63,15 +63,15 @@ class BaseDataset(DGLDataset):
         # Construct graphs
         for atoms in tqdm(self.trajs, ncols=80, ascii=True, desc='Processing data'):
             cell = atoms.todict()['cell']
-            u, v = neighbors(cell=cell, coord0=atoms.positions, 
-                             coord1=atoms.positions, rc=self.rc)
+            pos = wrap_positions(atoms.positions, cell=cell, pbc=atoms.pbc)
+            u, v = neighbors(cell=cell, coord0=pos, coord1=pos, rc=self.rc)
             non_self_edges_idx = u != v
             u, v = u[non_self_edges_idx], v[non_self_edges_idx]
 
             g = dgl.graph((u, v))
 
             atomics_num = np.array([atomic_numbers[symbol] for symbol in elements])
-            g.ndata['x'] = torch.from_numpy(atoms.positions).float()
+            g.ndata['x'] = torch.from_numpy(pos).float()
             g.ndata['atomic_number'] = torch.from_numpy(atomics_num).long()
             g.ndata['forces'] = torch.from_numpy(atoms.get_forces()).float()
             g.ndata['cell'] = torch.from_numpy(np.tile(cell, (g.num_nodes(), 1, 1))).float()
@@ -140,14 +140,7 @@ class VASPDataset(BaseDataset):
         from ase.io.vasp import read_vasp_xml
 
         vasprun = read_vasp_xml(self.file_, index=slice(0, None))
-        trajs = []
-        for traj in vasprun:
-            if traj.pbc:
-                traj.wrap()
-                trajs.append(traj)
-            else:
-                trajs.append(traj)
-
+        trajs = [traj for traj in vasprun]
         return trajs
 
 
@@ -167,14 +160,7 @@ class ASEDataset(BaseDataset):
         from ase.io.trajectory import TrajectoryReader
 
         original_trajs = TrajectoryReader(self.file_)
-        trajs = []
-        for traj in original_trajs:
-            if traj.pbc:
-                traj.wrap()
-                trajs.append(traj)
-            else:
-                trajs.append(traj)
-
+        trajs = [traj for traj in original_trajs]
         return trajs
         
         
@@ -236,16 +222,17 @@ class LAMMPSDataset(BaseDataset):
         for i in tqdm(range(len(self.trajs)), ncols=80, ascii=True, desc='Process Lammps data'):
             cell = self.trajs[i].todict()['cell']
             atoms = self.trajs[i]
-            atoms.wrap()
-            u, v = neighbors(cell=cell, coord0=atoms.positions, 
-                             coord1=atoms.positions, rc=self.rc)
+            pos = wrap_positions(atoms.positions, cell=cell, pbc=atoms.pbc)
+
+            u, v = neighbors(cell=cell, coord0=pos, 
+                             coord1=pos, rc=self.rc)
             non_self_edges_idx = u != v
             u, v = u[non_self_edges_idx], v[non_self_edges_idx]
             g = dgl.graph((u, v))
 
             atomics_num = np.array([atomic_numbers[symbol] for symbol in elements])
 
-            g.ndata['x'] = torch.from_numpy(atoms.positions).float()
+            g.ndata['x'] = torch.from_numpy(pos).float()
             g.ndata['atomic_number'] = torch.from_numpy(atomics_num).long()
             g.ndata['forces'] = torch.from_numpy(atoms.get_forces()).float()
             g.ndata['cell'] = torch.from_numpy(np.tile(cell, (g.num_nodes(), 1, 1))).float()
