@@ -8,27 +8,27 @@ def setup_(version):
     if version == 'cpu':
         required_packs = ['ase', 'tqdm', 'numpy>=1.16.4', 
                           'pymatgen>=2020.4.2', 'scikit_learn>=0.24.1', 
-                          'torch>=1.7.1', 'dgl>=0.6.0.post1']
+                          'torch>=1.7.1', 'dgl>=0.8a211027']
     # cuda 10.1
     if version == 'cu101':
         required_packs = ['ase', 'tqdm', 'numpy>=1.16.4', 
                           'pymatgen>=2020.4.2', 'scikit_learn>=0.24.1', 
-                          'torch==1.7.1+cu101', 'dgl-cu101']
+                          'torch==1.7.1+cu101', 'dgl-cu101>=0.8a211027']
     # cuda 10.2
     if version == 'cu102':
         required_packs = ['ase', 'tqdm', 'numpy>=1.16.4', 
                           'pymatgen>=2020.4.2', 'scikit_learn>=0.24.1', 
-                          'torch==1.9.1+cu102', 'dgl-cu102']
+                          'torch==1.9.1+cu102', 'dgl-cu102>=0.8a211027']
     # cuda 11.0
     if version == 'cu110':
         required_packs = ['ase', 'tqdm', 'numpy>=1.16.4', 
                           'pymatgen>=2020.4.2', 'scikit_learn>=0.24.1', 
-                          'torch==1.7.1+cu110', 'dgl-cu110']
+                          'torch==1.7.1+cu110', 'dgl-cu110>=0.8a211027']
     # cuda 11.1
     if version == 'cu111':
         required_packs = ['ase', 'tqdm', 'numpy>=1.16.4', 
                           'pymatgen>=2020.4.2', 'scikit_learn>=0.24.1', 
-                          'torch==1.9.1+cu111', 'dgl-cu111']
+                          'torch==1.9.1+cu111', 'dgl-cu111>=0.8a211027']
 
     if version == 'cpu':
         version = ''
