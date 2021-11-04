@@ -15,6 +15,7 @@ elif "${mode} == mpitwo" &
 units		        metal
 atom_style	    atomic
 atom_modify     sort 0 0.0 map yes
+boundary        p p p
 read_data       test.data
 mass            1 12
 mass            2 1
