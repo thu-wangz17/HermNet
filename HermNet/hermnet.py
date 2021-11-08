@@ -263,6 +263,7 @@ class HTNet(nn.Module):
                 etypes.append('-'.join(etype))
 
         self.in_feats_ = in_feats
+        self.rc = rc
         if intensive:
             self.pool = dglnn.glob.AvgPooling()
         else:
