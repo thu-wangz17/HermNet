@@ -47,7 +47,7 @@ def phonon_calc(atoms: Atoms, calc: Calculator,
     ph.run()
 
     # Read forces and assemble the dynamical matrix
-    ph.read(acoustic=True, **kwargs)
+    ph.read(acoustic=True, symmetrize=100)
     ph.clean()
 
     if not path:
@@ -95,4 +95,4 @@ def phonon_calc(atoms: Atoms, calc: Calculator,
 #     device = torch.device('cuda')
 #     model = HVNet(elems=['Mo', 'Se'], rc=5., l=30, in_feats=128, molecule=False, md=True).to(device)
 #     calc = NNCalculator(model=model, model_path='../best-model.pt', trn_mean=-709., device_='cuda')
-#     phonon_calc(atoms, calc, supercell=(4, 4, 1), plot=True, filename='test', force_const=True, emin=0., emax=0.05)
+#     F_C, D_q = phonon_calc(atoms, calc, supercell=(4, 4, 1), plot=True, filename='test', force_const=True, emin=0., emax=0.05)
