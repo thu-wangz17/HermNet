@@ -94,5 +94,5 @@ def phonon_calc(atoms: Atoms, calc: Calculator,
 #     atoms = read_vasp('POSCAR')
 #     device = torch.device('cuda')
 #     model = HVNet(elems=['Mo', 'Se'], rc=5., l=30, in_feats=128, molecule=False, md=True).to(device)
-#     calc = NNCalculator(model=model, model_path='../best-model.pt', trn_mean=-709., device_='cuda', rc=5.)
+#     calc = NNCalculator(model=model, model_path='../best-model.pt', trn_mean=-709., device_='cuda')
 #     phonon_calc(atoms, calc, supercell=(4, 4, 1), plot=True, filename='test', force_const=True, emin=0., emax=0.05)
