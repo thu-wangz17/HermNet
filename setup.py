@@ -36,7 +36,7 @@ def setup_(version):
         version = '-' + version
 
     setup(name='HermNet' + version, 
-          version='0.1.0', 
+          version='0.2.0', 
           description='Heterogeneous relational message passing networks', 
           author='wangz', 
           author_email='wz17.thu@gmail.com', 
