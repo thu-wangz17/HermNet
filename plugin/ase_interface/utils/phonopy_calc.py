@@ -45,6 +45,10 @@ def run(poscar: str, calc: Calculator, supercell: List[int],
     
     phonon.produce_force_constants(forces=forces_set)
 
+    # Enforce symmetries
+    phonon.symmetrize_force_constants_by_space_group()
+    phonon.symmetrize_force_constants()
+
     lat = original_atoms.cell.get_bravais_lattice()
     if not path:
         labels = list(lat.get_special_points())
