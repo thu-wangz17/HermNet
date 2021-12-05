@@ -495,6 +495,12 @@ class ISO17Dataset(BaseDataset):
 
 class DeePMDDataset(BaseDataset):
     """The dataset refers to http://www.deepmd.org/database/deeppot-se-data/"""
+
+    """`atom_ref` is computed by a multiple linear regression model with `sklearn`.
+    The goal of `stom_ref` is to shift the five datasets of `MoS2+Pt` uniformly.
+    """
+    atom_ref = {'Mo': 0.13052266, 'S': 0.26104532, 'Pt': -5.84084625, 'intercept_': 9.00229305455201}
+
     def __init__(self, rc: float, name: str, raw_dir: str, save_dir: str):
         self.path = os.path.abspath(raw_dir)
         self.rc = rc
@@ -553,6 +559,8 @@ class DeePMDDataset(BaseDataset):
                 atomics_num[atomics_num == 1] = atomic_numbers['H']
                 atomics_num[atomics_num == 2] = atomic_numbers['N']
 
+            atomics_num = atomics_num.tolist()
+
             train_idx = 0
             for i in range(count):
                 dir_ = os.path.join(self.path, 'set.00'+str(i))
@@ -582,7 +590,16 @@ class DeePMDDataset(BaseDataset):
                     g.ndata['forces'] = torch.from_numpy(forces[idx].reshape(-1, 3)).float()
                     g.ndata['cell'] = torch.from_numpy(np.tile(cell[idx], (g.num_nodes(), 1, 1))).float()
                     self.gs.append(g)
-                    self.PES.append(torch.tensor([energies[idx]]).float())
+                    if 'MoS2' in data_name or 'Pt' in data_name:
+                        self.PES.append(
+                            torch.tensor([energies[idx] \
+                                - atomics_num.count(0) * self.atom_ref['Mo'] \
+                                    - atomics_num.count(1) * self.atom_ref['S'] \
+                                        -atomics_num.count(2) * self.atom_ref['Pt'] \
+                                            - self.atom_ref['intercept_']]).float()
+                        )
+                    else:
+                        self.PES.append(torch.tensor([energies[idx]]).float())
 
             self.train_idx = range(train_idx)
         elif 'HEA' in self.path:
@@ -723,7 +740,14 @@ class DeePMDDataset(BaseDataset):
                             g.ndata['forces'] = torch.from_numpy(forces[idx].reshape(-1, 3)).float()
                             g.ndata['cell'] = torch.from_numpy(np.tile(cell[idx], (g.num_nodes(), 1, 1))).float()
                             self.gs.append(g)
-                            self.PES.append(torch.tensor([energies[idx]]).float())
+                            self.PES.append(
+                                torch.tensor([energies[idx] \
+                                    - atomics_num.count(0) * self.atom_ref['Mo'] \
+                                        - atomics_num.count(1) * self.atom_ref['S'] \
+                                            -atomics_num.count(2) * self.atom_ref['Pt'] \
+                                                - self.atom_ref['intercept_']]).float()
+                            )
+                            # self.PES.append(torch.tensor([energies[idx]]).float())
 
         elif 'Pt_surf_' in data_name:
             self.train_idx, self.test_idx = [], []
@@ -772,7 +796,14 @@ class DeePMDDataset(BaseDataset):
                             g.ndata['forces'] = torch.from_numpy(forces[idx].reshape(-1, 3)).float()
                             g.ndata['cell'] = torch.from_numpy(np.tile(cell[idx], (g.num_nodes(), 1, 1))).float()
                             self.gs.append(g)
-                            self.PES.append(torch.tensor([energies[idx]]).float())    
+                            self.PES.append(
+                                torch.tensor([energies[idx] \
+                                    - atomics_num.count(0) * self.atom_ref['Mo'] \
+                                        - atomics_num.count(1) * self.atom_ref['S'] \
+                                            -atomics_num.count(2) * self.atom_ref['Pt'] \
+                                                - self.atom_ref['intercept_']]).float()
+                            )
+                            # self.PES.append(torch.tensor([energies[idx]]).float())    
         else:
             raise NotImplementedError
 
