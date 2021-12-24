@@ -44,7 +44,7 @@ if __name__ == '__main__':
     calc = NNCalculator(model=model, model_path=args.model, trn_mean=args.trnMean, device_='cuda')
 
     def client():
-        os.system('python ' + ipi_path + ' input.xml', shell=True)
+        os.system('python ' + ipi_path + ' input.xml')
 
 
     def server():
