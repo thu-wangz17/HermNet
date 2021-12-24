@@ -84,4 +84,4 @@ class NNCalculator(Calculator):
         else:
             virial = np.array([0., 0., 0., 0., 0., 0.], dtype=np.float32)
 
-        return energy.detach().cpu().item(), forces.detach().cpu().view(-1).numpy(), virial
+        return energy.detach().cpu().item(), forces.detach().cpu().view(-1).numpy().reshape(-1, 3), virial
