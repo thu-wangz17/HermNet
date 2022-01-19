@@ -293,7 +293,7 @@ class HTNet(nn.Module):
                                in_feats=in_feats, 
                                molecule=molecule, 
                                dropout=dropout, 
-                               train=md)
+                               md=md)
                 for etype in etypes
             }
         )
@@ -307,7 +307,7 @@ class HTNet(nn.Module):
                                in_feats=in_feats, 
                                molecule=molecule, 
                                dropout=dropout, 
-                               train=md)
+                               md=md)
                 for etype in etypes
             }
         )
@@ -321,7 +321,7 @@ class HTNet(nn.Module):
                                in_feats=in_feats, 
                                molecule=molecule, 
                                dropout=dropout, 
-                               train=md)
+                               md=md)
                 for etype in etypes
             }
         )
