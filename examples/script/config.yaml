@@ -1,0 +1,74 @@
+data_preprocess:               # Preprocess data
+  name: MoSe2                  # Data name
+  data_path: vasprun.xml       # Original data path
+  store_path: preprocessed     # Path to store graphs and labels
+  rc: 5.                       # Cutoff Radius
+  file_type: vasp              # Type of original data file
+
+dataset:                       # Construct dataset
+  split:                       # Split dataset into trainset, valset and testset
+    - 0.8
+    - 0.1
+    - 0.1
+  seed: 1226                   # Split seed
+  shuffle: True                # Whether to shuffle dataset
+
+dataloader:                    # Construct dataloader
+  train_batch_size: 32         # Batch size of train loader
+  shuffle_train: True          # Whether to shuffle trainset
+  train_num_workers: 1         # The num_workers of train loader
+  train_pin_mem: True          # Whether to pin the trainset into memory
+  val_batch_size: 128          # Batch size of valloader
+  shuffle_val: False           # Whether to shuffle valset
+  val_num_workers: 1           # The num_workers of valloader
+  val_pin_mem: False           # Whether to pin the valset into memory
+
+model:                         # Build model
+  device: cuda                 # GPU or CPU
+  model_name: HVNet            # Select model
+  load_path: best-model.pt    # Path to load model
+  elems:                       # Element types
+    - Mo
+    - Se
+  rc: 5.                       # Cutoff radius for feature engineering
+  l: 30                        # The dimension for feature engineering
+  in_feats: 128                # The number of units
+  is_molecule: False           # Whether the system is molecule
+  md: False                    # Whether to calculate stress and if the cells of the trainset are same
+  dropout: True                # Whether to use dropout
+  intensive: False             # If the quantity to predict is intensive or extensive
+
+train_validation:              # Training and validation process
+  Train: True                  # Specific the process
+  optimizer: Adam              # Optimizer
+  learning_rate: 3e-4          # Learning rate
+  criterion: mse               # Loss to decrease
+  evaluation: mae              # Loss to show
+  loss:                        # Loss composition
+    - energy
+    - force
+  ratio:                       # Ratios for loss composition
+    - 0.2
+    - 0.8
+  epochs: 10000                 # Training epochs
+  dropout_start_epoch: 1000    # When to call dropout
+  normalize: True              # If the prediction is extensive quantity, whether to normalize with number of atoms
+  save_path: best-model.pt     # Path to save model
+  save_criteria: val_f         # Which index to save model 
+  # save_log: False              # Whether to save training log
+  # log_path: loss_log.dat       # If save _log=True, the path to save log
+  # distribute: False            # Whether to use distributed training
+  # dist_ip: 127.0.0.1           # IP for distributed training
+  # dist_port: 1226              # Port for distributed training
+  # backend: nccl                # Backend for distributed training
+
+# test:                          # Test process
+#   Eval: True                   # Specific the process
+#   evaluation: mae              # Loss to evaluate on test set
+#   normalize: True              # If the prediction is extensive quantity, whether to normalize with number of atoms
+#   test_batch_size: 128         # Batch size for test loader
+
+# md:                            # Molecular dynamics simulations
+#   interface: i-pi              # Software to interface, i.e. i-Pi, LAMMPS
+#   init_temp: 300
+#   end_temp: 300
