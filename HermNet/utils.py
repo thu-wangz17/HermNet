@@ -5,6 +5,7 @@ from sklearn.neighbors import NearestNeighbors
 import numpy as np
 from numpy import ndarray
 import dgl
+from collections import OrderedDict
 
 class DistributedEvalSampler(Sampler):
     r"""A copy of https://github.com/SeungjunNah/DeepDeblur-PyTorch/blob/master/src/data/sampler.py 
@@ -202,41 +203,25 @@ def dict_merge(adict, bdict):
     return {key: adict[key] + bdict[key] for key in adict.keys()}
 
 
-def save_model(model, path='./model.pkl', params_only=True):
+def save_model(model, rc, trn_mean, loss_dict, path='./model.pkl'):
     """Save the model.
     
     Parameters
     ----------
     model        : torch.nn.Module
         The neural network model to be saved
+    rc           : float
+        Cutoff radius
+    trn_mean     : float
+        Mean value of train set
+    loss_dict    : dict
+        A dictory whose form is {'trn_e': float, 'trn_f': float, 'val_e': float, 'val_f': float, ...}
     path         : str
         The path of the model to be saved
-    params_only  : bool
-        Whether save parameters of model or the complete model
     """
-    if params_only:
-        torch.save(model.state_dict(), path)
-    else:
-        torch.save(model, path)
-
-
-def load_model(path, device, model=None, params_only=True):
-    """Load the model.
-    Parameters
-    ----------
-    path        : str
-        The path of the model parameters to be loaded
-    device      : str
-        The device to allocate model
-    model       : torch.nn.Module
-        The model
-    params_only : bool
-        The model is saved with only parameters or the complete model
-    """
-    device = torch.device(device)
-    if params_only:
-        assert model is not None
-        model.load_state_dict(torch.load(path, map_location=device))
-    else:
-        assert model is None
-        return torch.load(path, map_location=device)
+    infos = OrderedDict()
+    infos['model_params'] = model.state_dict()
+    infos['rc'] = rc
+    infos['trn_mean'] = trn_mean
+    infos['loss'] = loss_dict
+    torch.save(infos, path)
