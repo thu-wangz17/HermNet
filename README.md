@@ -8,7 +8,7 @@ Heterogeneous relational message passing networks (```HermNet```)
 ```
 
 ![](https://img.shields.io/badge/language-python-yellow)
-[![](https://img.shields.io/badge/paper-PDF-orange)](https://arxiv.org/)
+[![](https://img.shields.io/badge/paper-PDF-orange)](https://www.nature.com/articles/s41524-022-00739-1)
 ![](https://img.shields.io/github/stars/sakuraiiiii/HermNet?style=social)
 ![](https://img.shields.io/github/forks/sakuraiiiii/HermNet?style=social)
 
@@ -49,10 +49,14 @@ The code has been tested with the libraries whose versions could be found in [`r
 
 ## Citation
 ```
-@article{wang2021heterogeneous,
+@article{wang2022heterogeneous,
   title={Heterogeneous relational message passing networks for molecular dynamics simulations},
   author={Wang, Zun and Wang, Chong and Zhao, Sibo and Xu, Yong and Hao, Shaogang and Hsieh, Chang Yu and Gu, Bing-Lin and Duan, Wenhui},
-  journal={arXiv preprint arXiv:2109.00711},
-  year={2021}
+  journal={npj Computational Materials},
+  volume={8},
+  number={1},
+  pages={1--9},
+  year={2022},
+  publisher={Nature Publishing Group}
 }
 ```
