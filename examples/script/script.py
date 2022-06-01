@@ -181,8 +181,8 @@ def main(cfg):
                 infos['elems'] = cfg.model.elems
                 infos['l']=cfg.model.l, 
                 infos['in_feats']=cfg.model.in_feats, 
-                infos['is_molecule']=cfg.model.is_molecule, 
-                infos['md']=cfg.model.md, 
-                infos['intensive']=cfg.model.intensive, 
+                infos['is_molecule']=cfg.model.is_molecule
+                infos['md']=cfg.model.md
+                infos['intensive']=cfg.model.intensive
 
                 torch.save(infos, cfg.train_validation.save_path)
