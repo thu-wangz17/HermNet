@@ -100,7 +100,7 @@ class VASPDataset(BaseDataModule):
 
             data = Data(pos=torch.from_numpy(positions).float(), 
                         atomic_number=torch.from_numpy(atomics_num).long(), 
-                        cell=torch.from_numpy(cell).float())
+                        cell=torch.from_numpy(cell).float().unsqueeze(0))
 
             data.forces = torch.from_numpy(forces).float()
             data.y = torch.tensor([atoms.get_potential_energy()]).float()
