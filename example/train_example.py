@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     print('Processing/Loading Data ...')
     t0 = time()
-    dataset = MD17Dataset(raw_dir='./', task='aspirin', rc=5.)
+    dataset = MD17Dataset(raw_dir='./', task='aspirin', rc=5., unit='eV')
     print('Done in {:.2f}s'.format(time()-t0))
 
     print('=================================')
