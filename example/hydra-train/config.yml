@@ -1,0 +1,59 @@
+data_preprocess:               # Preprocess data
+  name: aspirin                # Data name
+  data_path: .                 # Original data path
+  rc: 5.                       # Cutoff Radius
+  unit: eV                     # unit
+
+dataset:                       # Construct dataset
+  split:                       # Split dataset into trainset, valset and testset
+    - 0.8
+    - 0.1
+    - 0.1
+  seed: 1226                   # Split seed
+  shuffle: True                # Whether to shuffle dataset
+
+dataloader:                    # Construct dataloader
+  train_batch_size: 32         # Batch size of train loader
+  shuffle_train: True          # Whether to shuffle trainset
+  train_num_workers: 1         # The num_workers of train loader
+  train_pin_mem: True          # Whether to pin the trainset into memory
+  val_batch_size: 128          # Batch size of valloader
+  shuffle_val: False           # Whether to shuffle valset
+  val_num_workers: 1           # The num_workers of valloader
+  val_pin_mem: False           # Whether to pin the valset into memory
+
+model:                         # Build model
+  device: cuda                 # GPU or CPU
+  model_name: HVNet            # Select model
+  load_path: best-model.pt     # Path to load model
+  elems:                       # Element types
+    - C
+    - H
+    - O
+  model_rc: 5.                 # Cutoff radius for feature engineering
+  hidden_channels: 512         # The number of units
+  intensive: False             # If the quantity to predict is intensive or extensive
+  num_layers: 5                # The number of HermConvs
+  num_rbf: 128                 # The number of RBF
+  rbf:
+    name: gaussian
+  envelope:
+    name: polynomial
+    exponent: 5
+
+train_validation:              # Training and validation process
+  Train: True                  # Specific the process
+  optimizer: Adam              # Optimizer
+  learning_rate: 3e-4          # Learning rate
+  criterion: mse               # Loss to decrease
+  evaluation: mae              # Loss to show
+  loss:                        # Loss composition
+    - energy
+    - force
+  ratio:                       # Ratios for loss composition
+    - 0.2
+    - 0.8
+  epochs: 10000                 # Training epochs
+  normalize: True              # If the prediction is extensive quantity, whether to normalize with number of atoms
+  save_path: best-model.pt     # Path to save model
+  save_criteria: val_f         # Which index to save model 
