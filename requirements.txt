@@ -2,4 +2,5 @@ ase
 tqdm
 torch
 numpy
+torch_scatter
 torch_geometric

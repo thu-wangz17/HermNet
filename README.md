@@ -40,7 +40,8 @@ The following libraries are required:
 ```
 PyTorch
 Numpy
-Torch_geometric
+Torch_Scatter
+Torch_Geometric
 Ase
 ```
 The code has been tested with the libraries whose versions could be found in [`requirements.txt`](./requirements.txt).
