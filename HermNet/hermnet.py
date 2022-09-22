@@ -134,6 +134,10 @@ class HVNet(nn.Module):
         edge_index, pos = data.edge_index, data.pos
         j, i = edge_index
         distance_vec = pos[j] - pos[i]
+
+        if data.cell is not None and data.edge_shift is not None:
+            distance_vec += + torch.einsum('ni, nij -> nj', data.edge_shift, data.cell[data.batch[j]])
+
         edge_dist = distance_vec.norm(dim=-1)
 
         # Unit vectors pointing from edge_index[1] to edge_index[0],
