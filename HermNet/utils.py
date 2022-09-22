@@ -133,3 +133,28 @@ class DistributedEvalSampler(Sampler):
             epoch (int): _epoch number.
         """
         self.epoch = epoch
+
+
+def virial_calc(cell, pos, forces, energy, units='metal', pbc=False):
+    if units == 'metal':
+        nktv2p = 1.6021765e6
+    elif units in ['lj', 'si', 'cgs', 'micro', 'nano']:
+        nktv2p = 1.0
+    elif units == 'real':
+        nktv2p = 68568.415
+    elif units == 'electron':
+        nktv2p = 2.94210108e13
+    else:
+        raise ValueError('Illegal units command')
+
+    if pbc:
+        assert cell.requires_grad
+
+        virial = torch.einsum('ij, ik->jk', pos, forces) \
+            - cell.T@torch.autograd.grad(energy, cell)[0]
+        virial = (virial + virial.T) / 2 * nktv2p
+    else:
+        virial = torch.einsum('ij, ik->jk', pos, forces) * nktv2p
+        virial = (virial + virial.T) / 2
+
+    return virial
