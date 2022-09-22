@@ -1,11 +1,28 @@
 import torch
+from torch import Tensor
 from torch.utils.data import Sampler
 import torch.distributed as dist
-from sklearn.neighbors import NearestNeighbors
-import numpy as np
-from numpy import ndarray
-import dgl
 from collections import OrderedDict
+from torch_geometric.data import Data
+from typing import Any
+import copy
+
+
+def in_subgraph(data: Data, nids: Any):
+    rel_data = copy.copy(data)
+
+    edge_mask = torch.cat([torch.where(data.edge_index[1] == nid)[0] for nid in nids])
+    edge_index = data.edge_index[:, edge_mask]
+    
+    for key, value in rel_data:
+        if key == 'edge_index':
+            rel_data.edge_index = edge_index
+        elif isinstance(value, Tensor):
+            if data.is_edge_attr(key):
+                rel_data[key] = value[edge_mask]
+
+    return rel_data
+
 
 class DistributedEvalSampler(Sampler):
     r"""A copy of https://github.com/SeungjunNah/DeepDeblur-PyTorch/blob/master/src/data/sampler.py 
@@ -116,87 +133,6 @@ class DistributedEvalSampler(Sampler):
             epoch (int): _epoch number.
         """
         self.epoch = epoch
-
-
-def neighbors(cell: ndarray, coord0: ndarray, coord1: ndarray, rc: float):
-    """Calculate the nearest neighbors for constructing graph
-
-    Parameters
-    ----------
-    cell      : numpy.ndarray
-        The lattice of the supercell for molecular dynamics
-    coord0    : numpy.ndarray
-        The Cartesian coordinates in a single molecula dynamics frame
-    coord1    : numpy.ndarray
-        The Cartesian coordinates in a single molecula dynamics frame
-    rc        : float
-        The cutoff radius
-    """
-    u_list, v_list = [], []
-
-    # Consider the mirror atoms, calculate the nearest neighbors
-    for n1 in [-1, 0, 1]:
-        for n2 in [-1, 0, 1]:
-            for n3 in [-1, 0, 1]:
-                tmp = np.array([n1, n2, n3])
-                mirror_trans = tmp @ cell
-                neigh = NearestNeighbors(n_neighbors=2, radius=rc)
-                neigh.fit(mirror_trans + coord1)
-                v = neigh.radius_neighbors(coord0, rc, return_distance=False)
-
-                for i, j in enumerate(v):
-                    u_list += [i, ] * len(j)
-
-                v_list += np.hstack(v).tolist()
-
-    # Delete the repeat edges
-    u, v = np.unique(np.array([u_list, v_list]).T, axis=0).T
-    u, v = torch.from_numpy(u).long(), torch.from_numpy(v).long()
-    return u, v
-
-
-def virial_calc(cell, pos, forces, energy, units='metal', pbc=False):
-    if units == 'metal':
-        nktv2p = 1.6021765e6
-    elif units in ['lj', 'si', 'cgs', 'micro', 'nano']:
-        nktv2p = 1.0
-    elif units == 'real':
-        nktv2p = 68568.415
-    elif units == 'electron':
-        nktv2p = 2.94210108e13
-    else:
-        raise ValueError('Illegal units command')
-
-    if pbc:
-        assert cell.requires_grad
-
-        virial = torch.einsum('ij, ik->jk', pos, forces) \
-            - cell.T@torch.autograd.grad(energy, cell)[0]
-        virial = (virial + virial.T) / 2 * nktv2p
-    else:
-        virial = torch.einsum('ij, ik->jk', pos, forces) * nktv2p
-        virial = (virial + virial.T) / 2
-
-    return virial
-
-
-def _collate(samples):
-    g, e = zip(*samples)
-    bg = dgl.batch(g)
-    return bg, torch.tensor(e), bg.ndata['forces']
-
-
-def _collate_QM9(samples):
-    g, label = zip(*samples)
-    bg = dgl.batch(g)
-    return bg, torch.stack(label)
-
-def dict_allocate(adict, device):
-    bdict = {}
-    for key in adict.keys():
-        bdict[key] = adict[key].to(device)
-
-    return bdict
 
 
 def dict_merge(adict, bdict):

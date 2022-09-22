@@ -1,5 +1,8 @@
 # HermNet
 Heterogeneous relational message passing networks (```HermNet```)
+
+**Note: The code of `HermNet` is refactored from `DGL`-based to `PYG`-based because of the efficiency. Some codes are still unfinished and the related codes have not been tested.**
+
 ```
    __ __              _  __    __ 
   / // ___ ______ _  / |/ ___ / /_
@@ -37,15 +40,11 @@ The following libraries are required:
 ```
 PyTorch
 Numpy
-DGL>=0.6.0
-Scikit_Learn
-Pymatgen
+Torch_geometric
 Ase
 ```
 The code has been tested with the libraries whose versions could be found in [`requirements.txt`](./requirements.txt).
 
-***Tips:***
-* Install ```DGL``` with ```pip install --pre dgl``` (CPU version) or ```pip install --pre dgl-${CUDA}``` (GPU version).
 
 ## Citation
 ```

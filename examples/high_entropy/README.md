@@ -1,2 +1,0 @@
-# High Entropy Alloy: Al$_{1.3}$CoCrCuFeNi
-The configuration is built refering to [the paper](https://www.nature.com/articles/ncomms6964) and the settings in VASP refer to [the paper](https://www.mdpi.com/1099-4300/15/10/4504).
