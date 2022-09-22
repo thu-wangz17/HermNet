@@ -17,7 +17,7 @@ def neighbor_search(pos: Tensor, rc: float, cell: Optional[Tensor]=None):
         return edge_index.long()
     else:
         src, dst, edge_shift = primitive_neighbor_list(
-            'ijS', pbc=[True, True], cell=cell.numpy(), positions=pos.numpy(), cutoff=rc
+            'ijS', pbc=[True, True, True], cell=cell[0].numpy(), positions=pos.numpy(), cutoff=rc
         )
         edge_index = torch.from_numpy(np.vstack([src, dst])).long()
         edge_shift = torch.from_numpy(edge_shift).float()
