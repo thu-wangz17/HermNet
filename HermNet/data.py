@@ -8,18 +8,30 @@ from torch_geometric.data import Data, InMemoryDataset, download_url
 from torch import Tensor
 from torch_geometric.nn import radius_graph
 from ase.units import kcal, mol
+from ase.neighborlist import primitive_neighbor_list
 
 
-def neighbor_search(pos: Tensor, rc: float, **kwargs):
-    # Only for aperiodic sysmtems
-    edge_index = radius_graph(pos, rc, **kwargs)
-    return edge_index.long()
+def neighbor_search(pos: Tensor, rc: float, cell: Optional[Tensor]=None):
+    if cell is None:
+        edge_index = radius_graph(pos, rc)
+        return edge_index.long()
+    else:
+        src, dst, edge_shift = primitive_neighbor_list(
+            'ijS', pbc=[True, True], cell=cell.numpy(), positions=pos.numpy(), cutoff=rc
+        )
+        edge_index = torch.from_numpy(np.vstack([src, dst])).long()
+        edge_shift = torch.from_numpy(edge_shift).float()
+        return edge_index, edge_shift
 
 
 def transform(data: Data, rc: float):
     assert data.pos is not None
     
-    data.edge_index = neighbor_search(data.pos, rc)
+    if data.cell is None:
+        data.edge_index = neighbor_search(data.pos, rc)
+    else:
+        data.edge_index, data.edge_shift = neighbor_search(data.pos, rc, data.cell)
+
     return data
 
 
@@ -56,6 +68,47 @@ class BaseDataModule(InMemoryDataset):
 
         else:
             return self.index_select(idx)
+
+
+class VASPDataset(BaseDataModule):
+    """Base class for trajectories from molecular dynamics.
+    Parameters
+    ----------
+    raw_dir    : str
+        The directory that stores trajectories
+    """
+    def __init__(self, raw_dir: str, rc:float):
+        super(VASPDataset, self).__init__(raw_dir, rc)
+
+    @property
+    def raw_file_names(self):
+        return ['vasprun.xml']
+
+    def process(self):
+        from ase.io.vasp import read_vasp_xml
+
+        vasprun = read_vasp_xml(self.raw_paths[0], index=slice(0, None))
+        trajs = [traj for traj in vasprun]
+
+        data_list = []
+
+        for atoms in tqdm(trajs, ncols=80, ascii=True, desc=f'Process VASP dataset'):
+            forces = atoms.get_forces()
+            positions = atoms.get_positions()
+            atomics_num = atoms.get_atomic_numbers()
+            cell = atoms.todict()['cell']
+
+            data = Data(pos=torch.from_numpy(positions).float(), 
+                        atomic_number=torch.from_numpy(atomics_num).long(), 
+                        cell=torch.from_numpy(cell).float())
+
+            data.forces = torch.from_numpy(forces).float()
+            data.y = torch.from_numpy([atoms.get_potential_energy()]).float()
+
+            data_list.append(data)
+
+        data, slices = self.collate(data_list)
+        torch.save((data, slices), self.processed_paths[0])
 
 
 class MD17Dataset(BaseDataModule):
