@@ -1,3 +1,5 @@
+import os
+import pandas as pd
 import torch
 from tqdm import tqdm
 import numpy as np
@@ -92,7 +94,7 @@ class MD17Dataset(BaseDataModule):
 
         data_list = []
 
-        for i in tqdm(range(0, 10000, 10), ncols=80, ascii=True, desc=f'Process {self.task} data in MD17'):
+        for i in tqdm(range(len(npz_file['E'])), ncols=80, ascii=True, desc=f'Process {self.task} data in MD17'):
             forces = npz_file['F'][i]
 
             positions = npz_file['R'][i]
@@ -114,3 +116,78 @@ class MD17Dataset(BaseDataModule):
 
     def download(self):
         download_url(self.raw_url, self.raw_dir)
+
+
+class rMD17Dataset(BaseDataModule):
+    """Customizing revised MD17 database.
+    The datset could be downloaded from 
+    https://figshare.com/articles/dataset/Revised_MD17_dataset_rMD17_/12672038.
+    The dataset is revised.
+    Refer to https://arxiv.org/abs/2007.09593, 
+    One warning: 
+    As the structures are taken from a molecular dynamics simulation (i.e. time series data), 
+    they are not guaranteed to be independent samples. 
+    This is easily evident from the autocorrelation function for the original MD17 dataset
+    In short: 
+    DO NOT train a model on more than 1000 samples from this dataset. 
+    Data already published with 50K samples on the original MD17 dataset should 
+    be considered meaningless due to this fact and due to the noise in the original data.
+    Parameters
+    ----------
+    raw_dir    : str
+        The path directed to db file
+    task       : str
+        The name of the molecule
+    unit       : bool
+        The unit of energy
+    """
+    def __init__(self, raw_dir: str, task: str, rc: float, unit: str='kcal/mol'):
+        assert unit in ['kcal/mol', 'eV']
+        self.unit = unit
+
+        self.task = task
+
+        super(rMD17Dataset, self).__init__(raw_dir, rc)
+
+    @property
+    def raw_file_names(self):
+        return ['splits', 'npz_data']
+
+    def train_test_split(self):
+        idx_dir = self.raw_paths[0]
+        idx_files = sorted(os.listdir(idx_dir))
+        train_idx, test_idx = [], []
+        for file_ in idx_files:
+            if 'train' in file_:
+                train_idx += pd.read_csv(os.path.join(idx_dir, file_)).values.reshape(-1).tolist()
+            elif 'test' in file_:
+                test_idx += pd.read_csv(os.path.join(idx_dir, file_)).values.reshape(-1).tolist()
+
+        return train_idx, test_idx
+
+    def process(self):
+        npz_file = np.load(os.path.join(self.raw_paths[1], f'rmd17_{self.task}.npz'))
+
+        atomics_num = torch.from_numpy(npz_file['nuclear_charges'].astype('int')).long()
+        pos = npz_file['coords']
+        energy = npz_file['energies']
+        forces = torch.from_numpy(npz_file['forces']).float()
+        # old_idx = npz_file['old_indices']
+        # old_energy = npz_file['old_energies']
+        # old_forces = npz_file['old_forces']
+
+        data_list = []
+        for i in tqdm(range(len(npz_file['energies'])), ncols=80, ascii=True, desc='Process rMD17 data'):
+            data = Data(pos=torch.from_numpy(pos[i]).float(), atomic_number=atomics_num)
+
+            if self.unit == 'kcal/mol':
+                data.forces = forces[i]
+                data.y = torch.tensor([energy[i]]).float()
+            else:
+                data.forces = forces[i] * kcal / mol
+                data.y = torch.tensor([energy[i]]).float() * kcal / mol
+
+            data_list.append(data)
+
+        data, slices = self.collate(data_list)
+        torch.save((data, slices), self.processed_paths[0])
