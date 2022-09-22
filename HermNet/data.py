@@ -103,7 +103,7 @@ class VASPDataset(BaseDataModule):
                         cell=torch.from_numpy(cell).float())
 
             data.forces = torch.from_numpy(forces).float()
-            data.y = torch.from_numpy([atoms.get_potential_energy()]).float()
+            data.y = torch.tensor([atoms.get_potential_energy()]).float()
 
             data_list.append(data)
 
