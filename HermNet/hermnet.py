@@ -146,3 +146,8 @@ class HVNet(nn.Module):
         data.edge_dist = edge_dist
         data.edge_vec = edge_vec
         return data
+
+
+class HTNet(nn.Module):
+    def __init__(self):
+        raise NotImplementedError

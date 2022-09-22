@@ -133,31 +133,3 @@ class DistributedEvalSampler(Sampler):
             epoch (int): _epoch number.
         """
         self.epoch = epoch
-
-
-def dict_merge(adict, bdict):
-    return {key: adict[key] + bdict[key] for key in adict.keys()}
-
-
-def save_model(model, rc, trn_mean, loss_dict, path='./model.pkl'):
-    """Save the model.
-    
-    Parameters
-    ----------
-    model        : torch.nn.Module
-        The neural network model to be saved
-    rc           : float
-        Cutoff radius
-    trn_mean     : float
-        Mean value of train set
-    loss_dict    : dict
-        A dictory whose form is {'trn_e': float, 'trn_f': float, 'val_e': float, 'val_f': float, ...}
-    path         : str
-        The path of the model to be saved
-    """
-    infos = OrderedDict()
-    infos['model_params'] = model.state_dict()
-    infos['rc'] = rc
-    infos['trn_mean'] = trn_mean
-    infos['loss'] = loss_dict
-    torch.save(infos, path)
