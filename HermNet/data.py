@@ -244,3 +244,8 @@ class rMD17Dataset(BaseDataModule):
 
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
+
+
+class QM9Dataset(BaseDataModule):
+    def __init__(self):
+        raise NotImplementedError
