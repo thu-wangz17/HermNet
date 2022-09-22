@@ -66,21 +66,21 @@ def calculator(data, model, trn_mean, device, pbc, units,
     else:
         virial = np.array([0., 0., 0., 0., 0., 0.], dtype=np.float32)
 
-    if uncert:
-        assert shreshold
+    # if uncert:
+    #     assert shreshold
 
-        model.train()
+    #     model.train()
 
-        bagging_energies = []
-        for _ in tqdm(range(nums), ncols=80, ascii=True, desc='MCDropout'):
-            bagging_energies.append(model(g, cell).detach().cpu().item())
+    #     bagging_energies = []
+    #     for _ in tqdm(range(nums), ncols=80, ascii=True, desc='MCDropout'):
+    #         bagging_energies.append(model(g, cell).detach().cpu().item())
 
-        uncertainty = np.array(bagging_energies).std() / data.num_nodes * 1000
-        print('The energy uncertainty of current configuration = {:.3f} meV.'.format(uncertainty))
-        if uncertainty > shreshold:
-            warnings.warn('Uncertainty is larger than shreshold. '
-                'Keep simulating maybe dangerous. '
-                    'Suggest training the model with more related data')
+    #     uncertainty = np.array(bagging_energies).std() / data.num_nodes * 1000
+    #     print('The energy uncertainty of current configuration = {:.3f} meV.'.format(uncertainty))
+    #     if uncertainty > shreshold:
+    #         warnings.warn('Uncertainty is larger than shreshold. '
+    #             'Keep simulating maybe dangerous. '
+    #                 'Suggest training the model with more related data')
 
     return energy.detach().cpu().item(), forces.detach().cpu().view(-1).numpy(), virial
 
@@ -118,11 +118,11 @@ if __name__ == '__main__':
         type=str, nargs='*', required=True
     )
     parser.add_argument('-e', '--ensemble', help='Ensemble', type=str, default='NVT')
-    parser.add_argument(
-        '-a', '--uncertain', help='Whether to output uncertainty', type=str, default='False'
-    )
-    parser.add_argument('-v', '--shreshold', help='Shreshold for uncertainty', type=float)
-    parser.add_argument('-b', '--bags', help='Number of bagging', type=int, default=100)
+    # parser.add_argument(
+    #     '-a', '--uncertain', help='Whether to output uncertainty', type=str, default='False'
+    # )
+    # parser.add_argument('-v', '--shreshold', help='Shreshold for uncertainty', type=float)
+    # parser.add_argument('-b', '--bags', help='Number of bagging', type=int, default=100)
 
     args = parser.parse_args()
 
@@ -225,7 +225,7 @@ if __name__ == '__main__':
         energy, forces, virial = calculator(
             data=data, model=model, trn_mean=args.stats, device=args.device, 
             pbc=eval(args.periodic), units=args.units, ensemble=args.ensemble, 
-            uncert=eval(args.uncertain), shreshold=args.shreshold, nums=args.bags
+            # uncert=eval(args.uncertain), shreshold=args.shreshold, nums=args.bags
         )
 
         # return forces, energy, pressure to client
