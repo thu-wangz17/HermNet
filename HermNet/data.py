@@ -27,7 +27,7 @@ def neighbor_search(pos: Tensor, rc: float, cell: Optional[Tensor]=None):
 def transform(data: Data, rc: float):
     assert data.pos is not None
     
-    if data.cell is None:
+    if data.get('cell') is None:
         data.edge_index = neighbor_search(data.pos, rc)
     else:
         data.edge_index, data.edge_shift = neighbor_search(data.pos, rc, data.cell)
