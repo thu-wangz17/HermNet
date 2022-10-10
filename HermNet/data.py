@@ -144,23 +144,19 @@ class MD17Dataset(BaseDataModule):
 
     def process(self):
         npz_file = np.load(self.raw_paths[0])
+        forces, positions, atomics_num, energies = npz_file['F'], npz_file['R'], npz_file['z'].astype('int'), npz_file['E']
 
         data_list = []
 
-        for i in tqdm(range(len(npz_file['E'])), ncols=80, ascii=True, desc=f'Process {self.task} data in MD17'):
-            forces = npz_file['F'][i]
-
-            positions = npz_file['R'][i]
-            atomics_num = npz_file['z'].astype('int')
-
-            data = Data(pos=torch.from_numpy(positions).float(), atomic_number=torch.from_numpy(atomics_num).long())
+        for i in tqdm(range(len(energies)), ncols=80, ascii=True, desc=f'Process {self.task} data in MD17'):
+            data = Data(pos=torch.from_numpy(positions[i]).float(), atomic_number=torch.from_numpy(atomics_num).long())
 
             if self.unit == 'kcal/mol':
-                data.forces = torch.from_numpy(forces).float()
-                data.y = torch.from_numpy(npz_file['E'][i]).float()
+                data.forces = torch.from_numpy(forces[i]).float()
+                data.y = torch.from_numpy(energies[i]).float()
             else:
-                data.forces = torch.from_numpy(forces).float() * kcal / mol
-                data.y = torch.from_numpy(npz_file['E'][i]).float() * kcal / mol
+                data.forces = torch.from_numpy(forces[i]).float() * kcal / mol
+                data.y = torch.from_numpy(energies[i]).float() * kcal / mol
 
             data_list.append(data)
 
